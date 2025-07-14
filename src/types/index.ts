@@ -7,7 +7,7 @@ export interface Lead {
   phone?: string | null;
   company?: string | null;
   source?: string | null;
-  status: 'new' | 'contacted' | 'qualified' | 'converted';
+  status: string | null;
   notes?: string | null;
   value?: number | null;
   last_contact?: string | null;
@@ -21,7 +21,7 @@ export interface Campaign {
   name: string;
   description?: string | null;
   type?: string | null;
-  status: 'draft' | 'active' | 'paused' | 'completed';
+  status: string | null;
   start_date?: string | null;
   end_date?: string | null;
   budget?: number | null;
@@ -35,8 +35,8 @@ export interface EmailList {
   user_id: string;
   name: string;
   description?: string | null;
-  total_subscribers: number;
-  active_subscribers: number;
+  total_subscribers: number | null;
+  active_subscribers: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -47,8 +47,8 @@ export interface Template {
   name: string;
   subject?: string | null;
   content?: string | null;
-  template_type: 'email' | 'sms' | 'notification';
-  is_active: boolean;
+  template_type: string | null;
+  is_active: boolean | null;
   created_at: string;
   updated_at: string;
 }
