@@ -1,0 +1,6 @@
+First Name,Last Name,Email,Phone,State,Gender,Exam Category,How did you hear about us?,Status,Plan,Referral Code,Notes,Tags,Amount Paid,Subscription Plan
+John,Doe,john.doe@example.com,+91-9876543210,Maharashtra,Male,Court Exams,Google,New,Trial User,REF001,Interested in court reporting,legal;court-reporting,0,Trial User
+Jane,Smith,jane.smith@example.com,+91-9876543211,Karnataka,Female,SSC & other exams,Facebook,Contacted,Basic Monthly,REF002,Follow up needed,ssc;advanced,500,Basic Monthly
+Mike,Johnson,mike.j@example.com,+91-9876543212,Delhi,Male,Court Exams,Telegram,Qualified,Advanced Quarterly,REF003,High potential lead,legal;premium,1500,Advanced Quarterly
+Sarah,Williams,sarah.w@example.com,+91-9876543213,Tamil Nadu,Female,SSC & other exams,Instagram,New,Trial User,REF004,New inquiry,ssc;urgent,0,Trial User
+David,Brown,david.b@example.com,+91-9876543214,Gujarat,Male,Court Exams,YouTube,Contacted,Basic Monthly,REF005,Interested in premium features,legal;premium,500,Basic Monthly 

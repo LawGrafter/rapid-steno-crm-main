@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Users, Plus, Search, Eye, Edit, Trash2, X, DollarSign } from 'lucide-react';
+import { Users, Plus, Search, Eye, Edit, Trash2, X, DollarSign, Upload } from 'lucide-react';
 import { useCRM } from '../context/CRMContext';
 import { Lead } from '../types';
+import CSVImport from '../components/CSVImport';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
@@ -26,6 +27,7 @@ const Leads = () => {
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showCSVImport, setShowCSVImport] = useState(false);
   const [newTag, setNewTag] = useState('');
   
   const [formData, setFormData] = useState({
@@ -212,13 +214,22 @@ const Leads = () => {
           <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
           <p className="text-gray-600">Manage your leads and track their progress</p>
         </div>
-        <button 
-          onClick={() => setShowAddForm(true)}
-          className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center space-x-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Lead</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => setShowCSVImport(true)}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Import CSV</span>
+          </button>
+          <button 
+            onClick={() => setShowAddForm(true)}
+            className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Lead</span>
+          </button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -1087,6 +1098,12 @@ const Leads = () => {
           </div>
         </div>
       )}
+
+      {/* CSV Import Modal */}
+      <CSVImport 
+        isOpen={showCSVImport} 
+        onClose={() => setShowCSVImport(false)} 
+      />
     </div>
   );
 };

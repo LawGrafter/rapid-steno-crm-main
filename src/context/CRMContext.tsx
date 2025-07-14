@@ -19,6 +19,7 @@ interface CRMContextType {
   leads: Lead[];
   selectedLead: Lead | null;
   addLead: (lead: Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  addLeadsBulk: (leads: Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]) => Promise<{ data?: any; error?: any }>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
   deleteLead: (id: string) => Promise<void>;
   setSelectedLead: (lead: Lead | null) => void;
@@ -252,6 +253,58 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const addLeadsBulk = async (leadsData: Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]) => {
+    if (!user) return { error: 'User not authenticated' };
+
+    try {
+      // For large datasets, use the Edge Function
+      if (leadsData.length > 50) {
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-import-leads`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            leads: leadsData,
+            userId: user.id
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          // Refresh data to get the new leads
+          await refreshData();
+          return { data: result, error: null };
+        } else {
+          return { error: result.error || 'Bulk import failed' };
+        }
+      } else {
+        // For smaller datasets, use direct Supabase insert
+        const { data, error } = await supabase
+          .from('leads')
+          .insert(leadsData.map(lead => ({ ...lead, user_id: user.id })))
+          .select();
+
+        if (error) {
+          console.error('Error adding leads in bulk:', error);
+          return { error };
+        }
+
+        if (data) {
+          setLeads(prev => [...data, ...prev]);
+          return { data, error: null };
+        }
+
+        return { error: 'No data returned' };
+      }
+    } catch (error) {
+      console.error('Error in bulk import:', error);
+      return { error };
+    }
+  };
+
   const updateLead = async (id: string, updates: Partial<Lead>) => {
     const { data, error } = await supabase
       .from('leads')
@@ -475,6 +528,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     leads,
     selectedLead,
     addLead,
+    addLeadsBulk,
     updateLead,
     deleteLead,
     setSelectedLead,
