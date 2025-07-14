@@ -3,10 +3,11 @@ import { Users, Plus, Calendar, Search, Eye, Edit, Trash2, X, Download, Upload }
 import { useCRM } from '../context/CRMContext';
 
 const Leads = () => {
-  const { leads, addLead } = useCRM();
+  const { leads, addLead, updateLead, deleteLead } = useCRM();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   
@@ -33,20 +34,7 @@ const Leads = () => {
     };
     
     await addLead(leadData);
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      company: '',
-      source: '',
-      status: 'new',
-      notes: '',
-      value: '',
-      state: '',
-      examCategory: '',
-      plan: '',
-      userType: ''
-    });
+    resetForm();
     setShowAddForm(false);
   };
 
@@ -82,6 +70,23 @@ const Leads = () => {
     setShowViewModal(true);
   };
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      company: '',
+      source: '',
+      status: 'new',
+      notes: '',
+      value: '',
+      state: '',
+      examCategory: '',
+      plan: '',
+      userType: ''
+    });
+  };
+
   const handleEdit = (lead: any) => {
     setSelectedLead(lead);
     setFormData({
@@ -98,13 +103,27 @@ const Leads = () => {
       plan: lead.plan || '',
       userType: lead.userType || ''
     });
-    // Edit functionality can be added later
+    setShowEditForm(true);
   };
 
-  const handleDelete = (leadId: string) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+    
+    const updatedData = {
+      ...formData,
+      value: formData.value ? parseFloat(formData.value) : null
+    };
+    
+    await updateLead(selectedLead.id, updatedData);
+    resetForm();
+    setShowEditForm(false);
+    setSelectedLead(null);
+  };
+
+  const handleDelete = async (leadId: string) => {
     if (confirm('Are you sure you want to delete this lead?')) {
-      // Add delete functionality in CRM context
-      console.log('Delete lead:', leadId);
+      await deleteLead(leadId);
     }
   };
 
@@ -417,6 +436,115 @@ const Leads = () => {
                   className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
                 >
                   Add Lead
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Lead Modal */}
+      {showEditForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Edit Lead</h2>
+              <button onClick={() => setShowEditForm(false)}>
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Company/State</label>
+                <input
+                  type="text"
+                  value={formData.company}
+                  onChange={(e) => setFormData({...formData, company: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
+                <select
+                  value={formData.source}
+                  onChange={(e) => setFormData({...formData, source: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select source</option>
+                  <option value="website">Website</option>
+                  <option value="google">Google</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="referral">Referral</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="new">New</option>
+                  <option value="trial">Trial</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="qualified">Qualified</option>
+                  <option value="converted">Converted</option>
+                  <option value="lost">Lost</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditForm(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                >
+                  Update Lead
                 </button>
               </div>
             </form>
