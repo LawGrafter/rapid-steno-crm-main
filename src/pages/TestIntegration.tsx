@@ -35,6 +35,30 @@ const TestIntegration = () => {
       notes: 'Test registration from integration test'
     };
 
+    // 1. Create Supabase Auth user via Netlify function
+    addResult('Creating Supabase Auth user via Netlify function...');
+    let userResult;
+    try {
+      const userResp = await fetch('/.netlify/functions/create-supabase-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registrationData.email, name: registrationData.name || `${registrationData.first_name || ''} ${registrationData.last_name || ''}`.trim() })
+      });
+      userResult = await userResp.json();
+      if (!userResult.user) {
+        addResult(`❌ Failed to create Supabase Auth user: ${userResult.error}`);
+        setIsRunning(false);
+        return;
+      } else {
+        addResult('✅ Supabase Auth user created.');
+      }
+    } catch (err) {
+      addResult(`❌ Error creating Supabase Auth user: ${err}`);
+      setIsRunning(false);
+      return;
+    }
+
+    // 2. Proceed with CRM registration and activity sync
     try {
       const result = await crmIntegration.sendRegistration(registrationData);
       if (result.success) {
