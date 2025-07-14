@@ -26,8 +26,7 @@ const Login = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && !loading) {
-      console.log('Redirecting authenticated user to dashboard');
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, loading, navigate]);
 
@@ -40,10 +39,8 @@ const Login = () => {
       const { error } = await signIn(formData.email, formData.password);
       if (error) {
         setError(error.message || 'Login failed. Please check your credentials.');
-      } else {
-        // Successful login - redirect to dashboard
-        navigate('/dashboard');
       }
+      // Don't manually redirect - let useEffect handle it when auth state changes
     } catch (err: any) {
       setError('An unexpected error occurred. Please try again.');
     } finally {

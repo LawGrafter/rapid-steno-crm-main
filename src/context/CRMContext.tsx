@@ -99,10 +99,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         console.log('Auth state change:', event, !!session);
         
-        // Only update state if it's actually different
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          setSession(session);
-          setUser(session?.user ?? null);
+        // Update state and localStorage
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Sync with localStorage
+        if (session?.user) {
+          localStorage.setItem('isAuthenticated', 'true');
+        } else {
+          localStorage.removeItem('isAuthenticated');
         }
         
         // Don't set loading false on initial session since we handle that above
@@ -137,6 +142,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       email,
       password,
     });
+    
+    if (!error) {
+      localStorage.setItem('isAuthenticated', 'true');
+    }
+    
     return { error };
   };
 
@@ -159,6 +169,9 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (!error) {
+      // Clear localStorage
+      localStorage.removeItem('isAuthenticated');
+      
       // Clear all state immediately
       setUser(null);
       setSession(null);
