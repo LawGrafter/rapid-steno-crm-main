@@ -60,9 +60,12 @@ const Leads = () => {
       name: `${formData.first_name} ${formData.last_name}`.trim(),
       company: formData.state,
       source: formData.how_did_you_hear,
-      user_type: 'Trial User',
-      trial_start_date: formData.trial_start_date || new Date().toISOString(),
-      trial_end_date: formData.trial_end_date || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
+      user_type: formData.is_subscription_active ? 'Paid User' : 'Trial User',
+      trial_start_date: formData.trial_start_date ? new Date(formData.trial_start_date).toISOString() : new Date().toISOString(),
+      trial_end_date: formData.trial_end_date ? new Date(formData.trial_end_date).toISOString() : new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+      subscription_start_date: formData.subscription_start_date ? new Date(formData.subscription_start_date).toISOString() : null,
+      subscription_end_date: formData.subscription_end_date ? new Date(formData.subscription_end_date).toISOString() : null,
+      next_payment_date: formData.next_payment_date ? new Date(formData.next_payment_date).toISOString() : null
     };
     
     await addLead(leadData);
@@ -167,7 +170,12 @@ const Leads = () => {
       name: `${formData.first_name} ${formData.last_name}`.trim(),
       company: formData.state,
       source: formData.how_did_you_hear,
-      user_type: formData.is_subscription_active ? 'Paid User' : 'Trial User'
+      user_type: formData.is_subscription_active ? 'Paid User' : 'Trial User',
+      trial_start_date: formData.trial_start_date ? new Date(formData.trial_start_date).toISOString() : null,
+      trial_end_date: formData.trial_end_date ? new Date(formData.trial_end_date).toISOString() : null,
+      subscription_start_date: formData.subscription_start_date ? new Date(formData.subscription_start_date).toISOString() : null,
+      subscription_end_date: formData.subscription_end_date ? new Date(formData.subscription_end_date).toISOString() : null,
+      next_payment_date: formData.next_payment_date ? new Date(formData.next_payment_date).toISOString() : null
     };
     
     await updateLead(selectedLead.id, updatedData);
