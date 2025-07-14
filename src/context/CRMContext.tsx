@@ -82,23 +82,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     let mounted = true;
     
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!mounted) return;
-        
-        console.log('Auth state change:', event, !!session);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Only set loading to false after initial load
-        if (event !== 'INITIAL_SESSION') {
-          setLoading(false);
-        }
-      }
-    );
-
-    // Check for existing session
+    // Check for existing session first
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
       
@@ -107,6 +91,26 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUser(session?.user ?? null);
       setLoading(false);
     });
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!mounted) return;
+        
+        console.log('Auth state change:', event, !!session);
+        
+        // Only update state if it's actually different
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+        
+        // Don't set loading false on initial session since we handle that above
+        if (event !== 'INITIAL_SESSION') {
+          setLoading(false);
+        }
+      }
+    );
 
     return () => {
       mounted = false;
