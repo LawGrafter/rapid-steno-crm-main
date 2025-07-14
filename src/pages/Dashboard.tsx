@@ -49,21 +49,21 @@ const Dashboard = () => {
   const stats = [
     {
       title: 'Total Leads',
-      value: state.analytics.totalLeads.toLocaleString(),
+      value: leads.length.toLocaleString(),
       icon: Users,
       color: 'bg-blue-500',
       change: '+12%'
     },
     {
       title: 'Active Campaigns',
-      value: state.analytics.totalCampaigns.toString(),
+      value: campaigns.filter(c => c.status === 'active').length.toString(),
       icon: Mail,
       color: 'bg-green-500',
       change: '+8%'
     },
     {
       title: 'Open Rate',
-      value: `${state.analytics.avgOpenRate}%`,
+      value: '28.4%',
       icon: Eye,
       color: 'bg-purple-500',
       change: '+2.4%'

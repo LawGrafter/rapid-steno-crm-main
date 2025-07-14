@@ -26,7 +26,7 @@ const Leads = () => {
           <div className="space-y-4">
             {leads.map(lead => (
               <div key={lead.id} className="border rounded-lg p-4">
-                <h3 className="font-medium">{lead.firstName} {lead.lastName}</h3>
+                <h3 className="font-medium">{lead.name}</h3>
                 <p className="text-gray-600">{lead.email}</p>
               </div>
             ))}
