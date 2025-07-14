@@ -182,7 +182,6 @@ export type Database = {
           subscription_end_date: string | null
           subscription_plan: string | null
           subscription_start_date: string | null
-          tags: string[] | null
           trial_end_date: string | null
           trial_start_date: string | null
           updated_at: string
@@ -216,7 +215,6 @@ export type Database = {
           subscription_end_date?: string | null
           subscription_plan?: string | null
           subscription_start_date?: string | null
-          tags?: string[] | null
           trial_end_date?: string | null
           trial_start_date?: string | null
           updated_at?: string
@@ -250,7 +248,6 @@ export type Database = {
           subscription_end_date?: string | null
           subscription_plan?: string | null
           subscription_start_date?: string | null
-          tags?: string[] | null
           trial_end_date?: string | null
           trial_start_date?: string | null
           updated_at?: string
