@@ -19,9 +19,9 @@ export interface Lead {
   trialEndDate?: Date;
   lastActivity?: Date;
   
-  // Computed field for backward compatibility
-  get name(): string;
-  get source(): string;
+  // Computed fields for backward compatibility
+  name: string;
+  source: string;
 }
 
 export interface Campaign {

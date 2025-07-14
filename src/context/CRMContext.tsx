@@ -37,8 +37,8 @@ const initialState: CRMState = {
       trialStartDate: new Date('2024-01-20'),
       trialEndDate: new Date('2024-01-27'),
       lastActivity: new Date('2024-01-24'),
-      get name() { return `${this.firstName} ${this.lastName}`; },
-      get source() { return this.hearAboutUs; }
+      name: 'Rajesh Kumar',
+      source: 'google'
     },
     {
       id: '2',
@@ -57,8 +57,8 @@ const initialState: CRMState = {
       tags: ['journalism', 'media', 'advanced-user'],
       notes: 'Converted to Advanced plan. Uses shorthand for live reporting and interviews.',
       lastActivity: new Date('2024-01-25'),
-      get name() { return `${this.firstName} ${this.lastName}`; },
-      get source() { return this.hearAboutUs; }
+      name: 'Priya Sharma',
+      source: 'friend'
     },
     {
       id: '3',
@@ -77,8 +77,8 @@ const initialState: CRMState = {
       tags: ['freelancer', 'stenography', 'potential-basic'],
       notes: 'Freelance stenographer looking to improve speed. Considering Basic plan.',
       lastActivity: new Date('2024-01-23'),
-      get name() { return `${this.firstName} ${this.lastName}`; },
-      get source() { return this.hearAboutUs; }
+      name: 'Amit Patel',
+      source: 'youtube'
     },
     {
       id: '4',
@@ -97,8 +97,8 @@ const initialState: CRMState = {
       tags: ['education', 'bulk-license', 'institutional'],
       notes: 'Professor interested in teaching shorthand to journalism students. Needs bulk licensing.',
       lastActivity: new Date('2024-01-19'),
-      get name() { return `${this.firstName} ${this.lastName}`; },
-      get source() { return this.hearAboutUs; }
+      name: 'Sunita Verma',
+      source: 'banner'
     },
     {
       id: '5',
@@ -119,8 +119,8 @@ const initialState: CRMState = {
       trialStartDate: new Date('2024-01-13'),
       trialEndDate: new Date('2024-01-20'),
       lastActivity: new Date('2024-01-13'),
-      get name() { return `${this.firstName} ${this.lastName}`; },
-      get source() { return this.hearAboutUs; }
+      name: 'Vikram Singh',
+      source: 'facebook'
     },
     {
       id: '6',
@@ -139,8 +139,8 @@ const initialState: CRMState = {
       tags: ['secretary', 'business', 'new-lead'],
       notes: 'Executive secretary looking to improve note-taking speed for meetings.',
       lastActivity: new Date('2024-01-25'),
-      get name() { return `${this.firstName} ${this.lastName}`; },
-      get source() { return this.hearAboutUs; }
+      name: 'Meera Joshi',
+      source: 'instagram'
     },
     {
       id: '7',
@@ -161,8 +161,8 @@ const initialState: CRMState = {
       trialStartDate: new Date('2024-01-28'),
       trialEndDate: new Date('2024-02-04'),
       lastActivity: new Date('2024-01-29'),
-      get name() { return `${this.firstName} ${this.lastName}`; },
-      get source() { return this.hearAboutUs; }
+      name: 'Arjun Reddy',
+      source: 'whatsapp'
     }
   ],
   campaigns: [
