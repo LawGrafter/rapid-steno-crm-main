@@ -1,41 +1,56 @@
+// Database-compatible interfaces
 export interface Lead {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  gender: 'male' | 'female' | 'other' | 'prefer-not-to-say';
-  state: string;
-  hearAboutUs: 'google' | 'telegram' | 'facebook' | 'instagram' | 'youtube' | 'friend' | 'whatsapp' | 'pamphlet' | 'banner' | 'mouth-to-mouth';
-  examCategory: 'court-exams' | 'ssc-other-exams';
-  referralCode?: string;
-  status: 'new' | 'trial' | 'converted';
-  plan: 'basic' | 'advanced' | 'none';
-  userType: 'unpaid' | 'trial' | 'paid';
-  createdAt: Date;
-  tags: string[];
-  notes: string;
-  trialStartDate?: Date;
-  trialEndDate?: Date;
-  lastActivity?: Date;
-  
-  // Computed fields for backward compatibility
+  user_id: string;
   name: string;
-  source: string;
+  email?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  source?: string | null;
+  status: 'new' | 'contacted' | 'qualified' | 'converted';
+  notes?: string | null;
+  value?: number | null;
+  last_contact?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Campaign {
   id: string;
+  user_id: string;
   name: string;
-  type: 'automated' | 'broadcast';
-  status: 'active' | 'scheduled' | 'completed' | 'draft';
-  subject: string;
-  recipients: number;
-  opens: number;
-  clicks: number;
-  createdAt: Date;
-  scheduledAt: Date;
-  template: string;
+  description?: string | null;
+  type?: string | null;
+  status: 'draft' | 'active' | 'paused' | 'completed';
+  start_date?: string | null;
+  end_date?: string | null;
+  budget?: number | null;
+  target_audience?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmailList {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string | null;
+  total_subscribers: number;
+  active_subscribers: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Template {
+  id: string;
+  user_id: string;
+  name: string;
+  subject?: string | null;
+  content?: string | null;
+  template_type: 'email' | 'sms' | 'notification';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Domain {
@@ -64,33 +79,6 @@ export interface Analytics {
   avgClickRate: number;
   revenue: number;
   recentActivity: Activity[];
-}
-
-export interface EmailList {
-  id: string;
-  name: string;
-  description: string;
-  subscribers: number;
-  activeSubscribers: number;
-  tags: string[];
-  createdAt: Date;
-  lastUpdated: Date;
-  status: 'active' | 'archived';
-  type: 'static' | 'dynamic';
-}
-
-export interface EmailTemplate {
-  id: string;
-  name: string;
-  subject: string;
-  previewText: string;
-  fromEmail: string;
-  fromName: string;
-  htmlContent: string;
-  createdAt: Date;
-  updatedAt: Date;
-  category: 'welcome' | 'newsletter' | 'promotion' | 'transactional' | 'custom';
-  isActive: boolean;
 }
 export interface Payment {
   id: string;

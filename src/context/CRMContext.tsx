@@ -1,284 +1,57 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { Lead, Campaign, Domain, Analytics } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
+import type { Lead, Campaign, EmailList, Template } from '../types';
 
-interface CRMState {
+interface CRMContextType {
+  // User state
+  user: User | null;
+  session: Session | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  
+  // Auth methods
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
+  signOut: () => Promise<{ error: any }>;
+  
+  // Leads
   leads: Lead[];
-  campaigns: Campaign[];
-  domains: Domain[];
-  analytics: Analytics;
   selectedLead: Lead | null;
+  addLead: (lead: Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
+  deleteLead: (id: string) => Promise<void>;
+  setSelectedLead: (lead: Lead | null) => void;
+  
+  // Campaigns
+  campaigns: Campaign[];
   selectedCampaign: Campaign | null;
+  addCampaign: (campaign: Omit<Campaign, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateCampaign: (id: string, updates: Partial<Campaign>) => Promise<void>;
+  deleteCampaign: (id: string) => Promise<void>;
+  setSelectedCampaign: (campaign: Campaign | null) => void;
+  
+  // Email Lists
+  emailLists: EmailList[];
+  selectedEmailList: EmailList | null;
+  addEmailList: (list: Omit<EmailList, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateEmailList: (id: string, updates: Partial<EmailList>) => Promise<void>;
+  deleteEmailList: (id: string) => Promise<void>;
+  setSelectedEmailList: (list: EmailList | null) => void;
+  
+  // Templates
+  templates: Template[];
+  selectedTemplate: Template | null;
+  addTemplate: (template: Omit<Template, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateTemplate: (id: string, updates: Partial<Template>) => Promise<void>;
+  deleteTemplate: (id: string) => Promise<void>;
+  setSelectedTemplate: (template: Template | null) => void;
+  
+  // Data refresh
+  refreshData: () => Promise<void>;
 }
 
-interface CRMAction {
-  type: string;
-  payload?: any;
-}
-
-const initialState: CRMState = {
-  leads: [
-    {
-      id: '1',
-      firstName: 'Rajesh',
-      lastName: 'Kumar',
-      email: 'rajesh.kumar@lawfirm.in',
-      phone: '+1234567890',
-      gender: 'male',
-      state: 'Maharashtra',
-      hearAboutUs: 'google',
-      examCategory: 'court-exams',
-      referralCode: 'REF123',
-      status: 'trial',
-      plan: 'basic',
-      userType: 'trial',
-      createdAt: new Date('2024-01-15'),
-      tags: ['legal', 'court-reporting'],
-      notes: 'Interested in shorthand for court proceedings. Currently on 7-day trial.',
-      trialStartDate: new Date('2024-01-20'),
-      trialEndDate: new Date('2024-01-27'),
-      lastActivity: new Date('2024-01-24'),
-      name: 'Rajesh Kumar',
-      source: 'google'
-    },
-    {
-      id: '2',
-      firstName: 'Priya',
-      lastName: 'Sharma',
-      email: 'priya.sharma@newstoday.com',
-      phone: '+1987654321',
-      gender: 'female',
-      state: 'Delhi',
-      hearAboutUs: 'friend',
-      examCategory: 'ssc-other-exams',
-      status: 'converted',
-      plan: 'advanced',
-      userType: 'paid',
-      createdAt: new Date('2024-01-20'),
-      tags: ['journalism', 'media', 'advanced-user'],
-      notes: 'Converted to Advanced plan. Uses shorthand for live reporting and interviews.',
-      lastActivity: new Date('2024-01-25'),
-      name: 'Priya Sharma',
-      source: 'friend'
-    },
-    {
-      id: '3',
-      firstName: 'Amit',
-      lastName: 'Patel',
-      email: 'amit.patel@freelance.com',
-      phone: '+1555123456',
-      gender: 'male',
-      state: 'Gujarat',
-      hearAboutUs: 'youtube',
-      examCategory: 'ssc-other-exams',
-      status: 'new',
-      plan: 'none',
-      userType: 'unpaid',
-      createdAt: new Date('2024-01-22'),
-      tags: ['freelancer', 'stenography', 'potential-basic'],
-      notes: 'Freelance stenographer looking to improve speed. Considering Basic plan.',
-      lastActivity: new Date('2024-01-23'),
-      name: 'Amit Patel',
-      source: 'youtube'
-    },
-    {
-      id: '4',
-      firstName: 'Sunita',
-      lastName: 'Verma',
-      email: 'sunita.verma@university.edu',
-      phone: '+1444987654',
-      gender: 'female',
-      state: 'Delhi',
-      hearAboutUs: 'banner',
-      examCategory: 'ssc-other-exams',
-      status: 'new',
-      plan: 'none',
-      userType: 'unpaid',
-      createdAt: new Date('2024-01-18'),
-      tags: ['education', 'bulk-license', 'institutional'],
-      notes: 'Professor interested in teaching shorthand to journalism students. Needs bulk licensing.',
-      lastActivity: new Date('2024-01-19'),
-      name: 'Sunita Verma',
-      source: 'banner'
-    },
-    {
-      id: '5',
-      firstName: 'Vikram',
-      lastName: 'Singh',
-      email: 'vikram.singh@corporatelaw.in',
-      phone: '+1333456789',
-      gender: 'male',
-      state: 'Rajasthan',
-      hearAboutUs: 'facebook',
-      examCategory: 'court-exams',
-      status: 'new',
-      plan: 'none',
-      userType: 'unpaid',
-      createdAt: new Date('2024-01-12'),
-      tags: ['legal', 'unresponsive'],
-      notes: 'Showed initial interest but hasn\'t responded to follow-ups. Trial expired unused.',
-      trialStartDate: new Date('2024-01-13'),
-      trialEndDate: new Date('2024-01-20'),
-      lastActivity: new Date('2024-01-13'),
-      name: 'Vikram Singh',
-      source: 'facebook'
-    },
-    {
-      id: '6',
-      firstName: 'Meera',
-      lastName: 'Joshi',
-      email: 'meera.joshi@secretary.com',
-      phone: '+1222345678',
-      gender: 'female',
-      state: 'Karnataka',
-      hearAboutUs: 'instagram',
-      examCategory: 'ssc-other-exams',
-      status: 'new',
-      plan: 'none',
-      userType: 'unpaid',
-      createdAt: new Date('2024-01-25'),
-      tags: ['secretary', 'business', 'new-lead'],
-      notes: 'Executive secretary looking to improve note-taking speed for meetings.',
-      lastActivity: new Date('2024-01-25'),
-      name: 'Meera Joshi',
-      source: 'instagram'
-    },
-    {
-      id: '7',
-      firstName: 'Arjun',
-      lastName: 'Reddy',
-      email: 'arjun.reddy@student.ac.in',
-      phone: '+1111234567',
-      gender: 'male',
-      state: 'Telangana',
-      hearAboutUs: 'whatsapp',
-      examCategory: 'ssc-other-exams',
-      status: 'trial',
-      plan: 'none',
-      userType: 'trial',
-      createdAt: new Date('2024-01-28'),
-      tags: ['student', 'journalism', 'social-media'],
-      notes: 'Journalism student preparing for competitive exams. Started Basic plan trial.',
-      trialStartDate: new Date('2024-01-28'),
-      trialEndDate: new Date('2024-02-04'),
-      lastActivity: new Date('2024-01-29'),
-      name: 'Arjun Reddy',
-      source: 'whatsapp'
-    }
-  ],
-  campaigns: [
-    {
-      id: '1',
-      name: 'Welcome Series',
-      type: 'automated',
-      status: 'active',
-      subject: 'Welcome to Rapid Steno',
-      recipients: 1250,
-      opens: 892,
-      clicks: 234,
-      createdAt: new Date('2024-01-10'),
-      scheduledAt: new Date('2024-01-15'),
-      template: 'welcome-template'
-    },
-    {
-      id: '2',
-      name: 'Product Launch',
-      type: 'broadcast',
-      status: 'scheduled',
-      subject: 'New Features Available Now!',
-      recipients: 2500,
-      opens: 0,
-      clicks: 0,
-      createdAt: new Date('2024-01-25'),
-      scheduledAt: new Date('2024-01-30'),
-      template: 'product-launch-template'
-    }
-  ],
-  domains: [
-    {
-      id: '1',
-      domain: 'rapidsteno.com',
-      status: 'verified',
-      dkimStatus: 'valid',
-      spfStatus: 'valid',
-      dmarcStatus: 'valid',
-      reputation: 98,
-      createdAt: new Date('2024-01-01')
-    }
-  ],
-  analytics: {
-    totalLeads: 1547,
-    totalCampaigns: 23,
-    totalSent: 45230,
-    avgOpenRate: 24.5,
-    avgClickRate: 3.8,
-    revenue: 125000,
-    recentActivity: [
-      {
-        id: '1',
-        type: 'lead_created',
-        description: 'New lead: John Doe',
-        timestamp: new Date('2024-01-25T10:30:00')
-      },
-      {
-        id: '2',
-        type: 'campaign_sent',
-        description: 'Welcome Series sent to 150 recipients',
-        timestamp: new Date('2024-01-25T09:15:00')
-      }
-    ]
-  },
-  selectedLead: null,
-  selectedCampaign: null
-};
-
-const crmReducer = (state: CRMState, action: CRMAction): CRMState => {
-  switch (action.type) {
-    case 'SET_SELECTED_LEAD':
-      return { ...state, selectedLead: action.payload };
-    case 'SET_SELECTED_CAMPAIGN':
-      return { ...state, selectedCampaign: action.payload };
-    case 'ADD_LEAD':
-      return { ...state, leads: [...state.leads, action.payload] };
-    case 'UPDATE_LEAD':
-      return {
-        ...state,
-        leads: state.leads.map(lead =>
-          lead.id === action.payload.id ? action.payload : lead
-        )
-      };
-    case 'DELETE_LEAD':
-      return {
-        ...state,
-        leads: state.leads.filter(lead => lead.id !== action.payload)
-      };
-    case 'ADD_CAMPAIGN':
-      return { ...state, campaigns: [...state.campaigns, action.payload] };
-    case 'UPDATE_CAMPAIGN':
-      return {
-        ...state,
-        campaigns: state.campaigns.map(campaign =>
-          campaign.id === action.payload.id ? action.payload : campaign
-        )
-      };
-    default:
-      return state;
-  }
-};
-
-const CRMContext = createContext<{
-  state: CRMState;
-  dispatch: React.Dispatch<CRMAction>;
-} | null>(null);
-
-export const CRMProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(crmReducer, initialState);
-
-  return (
-    <CRMContext.Provider value={{ state, dispatch }}>
-      {children}
-    </CRMContext.Provider>
-  );
-};
+const CRMContext = createContext<CRMContextType | null>(null);
 
 export const useCRM = () => {
   const context = useContext(CRMContext);
@@ -287,3 +60,412 @@ export const useCRM = () => {
   }
   return context;
 };
+
+export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [emailLists, setEmailLists] = useState<EmailList[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [selectedEmailList, setSelectedEmailList] = useState<EmailList | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+
+  const isAuthenticated = !!session?.user;
+
+  // Initialize auth state
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        
+        // Clear local storage on sign out
+        if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('isAuthenticated');
+        } else if (event === 'SIGNED_IN') {
+          localStorage.setItem('isAuthenticated', 'true');
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+      
+      if (session) {
+        localStorage.setItem('isAuthenticated', 'true');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Load data when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshData();
+    } else {
+      // Clear data when not authenticated
+      setLeads([]);
+      setCampaigns([]);
+      setEmailLists([]);
+      setTemplates([]);
+    }
+  }, [isAuthenticated]);
+
+  // Auth methods
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
+  };
+
+  const signUp = async (email: string, password: string, fullName?: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          full_name: fullName || '',
+        }
+      }
+    });
+    return { error };
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    return { error };
+  };
+
+  // Data loading
+  const refreshData = async () => {
+    if (!user) return;
+
+    try {
+      // Load leads
+      const { data: leadsData } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (leadsData) setLeads(leadsData);
+
+      // Load campaigns
+      const { data: campaignsData } = await supabase
+        .from('campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (campaignsData) setCampaigns(campaignsData);
+
+      // Load email lists
+      const { data: emailListsData } = await supabase
+        .from('email_lists')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (emailListsData) setEmailLists(emailListsData);
+
+      // Load templates
+      const { data: templatesData } = await supabase
+        .from('email_templates')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (templatesData) setTemplates(templatesData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+  };
+
+  // Lead operations
+  const addLead = async (leadData: Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('leads')
+      .insert([{ ...leadData, user_id: user.id }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding lead:', error);
+      return;
+    }
+
+    if (data) {
+      setLeads(prev => [data, ...prev]);
+    }
+  };
+
+  const updateLead = async (id: string, updates: Partial<Lead>) => {
+    const { data, error } = await supabase
+      .from('leads')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating lead:', error);
+      return;
+    }
+
+    if (data) {
+      setLeads(prev => prev.map(lead => lead.id === id ? data : lead));
+      if (selectedLead?.id === id) {
+        setSelectedLead(data);
+      }
+    }
+  };
+
+  const deleteLead = async (id: string) => {
+    const { error } = await supabase
+      .from('leads')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting lead:', error);
+      return;
+    }
+
+    setLeads(prev => prev.filter(lead => lead.id !== id));
+    if (selectedLead?.id === id) {
+      setSelectedLead(null);
+    }
+  };
+
+  // Campaign operations
+  const addCampaign = async (campaignData: Omit<Campaign, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('campaigns')
+      .insert([{ ...campaignData, user_id: user.id }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding campaign:', error);
+      return;
+    }
+
+    if (data) {
+      setCampaigns(prev => [data, ...prev]);
+    }
+  };
+
+  const updateCampaign = async (id: string, updates: Partial<Campaign>) => {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating campaign:', error);
+      return;
+    }
+
+    if (data) {
+      setCampaigns(prev => prev.map(campaign => campaign.id === id ? data : campaign));
+      if (selectedCampaign?.id === id) {
+        setSelectedCampaign(data);
+      }
+    }
+  };
+
+  const deleteCampaign = async (id: string) => {
+    const { error } = await supabase
+      .from('campaigns')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting campaign:', error);
+      return;
+    }
+
+    setCampaigns(prev => prev.filter(campaign => campaign.id !== id));
+    if (selectedCampaign?.id === id) {
+      setSelectedCampaign(null);
+    }
+  };
+
+  // Email List operations
+  const addEmailList = async (listData: Omit<EmailList, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('email_lists')
+      .insert([{ ...listData, user_id: user.id }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding email list:', error);
+      return;
+    }
+
+    if (data) {
+      setEmailLists(prev => [data, ...prev]);
+    }
+  };
+
+  const updateEmailList = async (id: string, updates: Partial<EmailList>) => {
+    const { data, error } = await supabase
+      .from('email_lists')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating email list:', error);
+      return;
+    }
+
+    if (data) {
+      setEmailLists(prev => prev.map(list => list.id === id ? data : list));
+      if (selectedEmailList?.id === id) {
+        setSelectedEmailList(data);
+      }
+    }
+  };
+
+  const deleteEmailList = async (id: string) => {
+    const { error } = await supabase
+      .from('email_lists')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting email list:', error);
+      return;
+    }
+
+    setEmailLists(prev => prev.filter(list => list.id !== id));
+    if (selectedEmailList?.id === id) {
+      setSelectedEmailList(null);
+    }
+  };
+
+  // Template operations
+  const addTemplate = async (templateData: Omit<Template, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('email_templates')
+      .insert([{ ...templateData, user_id: user.id }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding template:', error);
+      return;
+    }
+
+    if (data) {
+      setTemplates(prev => [data, ...prev]);
+    }
+  };
+
+  const updateTemplate = async (id: string, updates: Partial<Template>) => {
+    const { data, error } = await supabase
+      .from('email_templates')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating template:', error);
+      return;
+    }
+
+    if (data) {
+      setTemplates(prev => prev.map(template => template.id === id ? data : template));
+      if (selectedTemplate?.id === id) {
+        setSelectedTemplate(data);
+      }
+    }
+  };
+
+  const deleteTemplate = async (id: string) => {
+    const { error } = await supabase
+      .from('email_templates')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting template:', error);
+      return;
+    }
+
+    setTemplates(prev => prev.filter(template => template.id !== id));
+    if (selectedTemplate?.id === id) {
+      setSelectedTemplate(null);
+    }
+  };
+
+  const value: CRMContextType = {
+    user,
+    session,
+    isAuthenticated,
+    loading,
+    signIn,
+    signUp,
+    signOut,
+    leads,
+    selectedLead,
+    addLead,
+    updateLead,
+    deleteLead,
+    setSelectedLead,
+    campaigns,
+    selectedCampaign,
+    addCampaign,
+    updateCampaign,
+    deleteCampaign,
+    setSelectedCampaign,
+    emailLists,
+    selectedEmailList,
+    addEmailList,
+    updateEmailList,
+    deleteEmailList,
+    setSelectedEmailList,
+    templates,
+    selectedTemplate,
+    addTemplate,
+    updateTemplate,
+    deleteTemplate,
+    setSelectedTemplate,
+    refreshData
+  };
+
+  return (
+    <CRMContext.Provider value={value}>
+      {children}
+    </CRMContext.Provider>
+  );
+};
+
+export default CRMProvider;
