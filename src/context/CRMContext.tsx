@@ -167,12 +167,8 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      // Clear localStorage
-      localStorage.removeItem('isAuthenticated');
-      
-      // Clear all state immediately
+    try {
+      // Clear state immediately regardless of Supabase response
       setUser(null);
       setSession(null);
       setLeads([]);
@@ -183,8 +179,16 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSelectedCampaign(null);
       setSelectedEmailList(null);
       setSelectedTemplate(null);
+      localStorage.removeItem('isAuthenticated');
+      
+      // Try to sign out from Supabase (but don't let it block the logout)
+      await supabase.auth.signOut({ scope: 'local' });
+      
+      return { error: null };
+    } catch (error) {
+      console.warn('Supabase signout error (proceeding anyway):', error);
+      return { error: null }; // Return success anyway since we cleared local state
     }
-    return { error };
   };
 
   // Data loading
