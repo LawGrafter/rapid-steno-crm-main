@@ -20,6 +20,15 @@ export interface Lead {
   notes?: string | null;
   value?: number | null;
   last_contact?: string | null;
+  trial_start_date?: string | null;
+  trial_end_date?: string | null;
+  subscription_plan?: string | null;
+  subscription_start_date?: string | null;
+  subscription_end_date?: string | null;
+  amount_paid?: number | null;
+  next_payment_date?: string | null;
+  is_trial_active?: boolean | null;
+  is_subscription_active?: boolean | null;
   created_at: string;
   updated_at: string;
 }

@@ -157,6 +157,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          amount_paid: number | null
           company: string | null
           created_at: string
           email: string | null
@@ -165,9 +166,12 @@ export type Database = {
           gender: string | null
           how_did_you_hear: string | null
           id: string
+          is_subscription_active: boolean | null
+          is_trial_active: boolean | null
           last_contact: string | null
           last_name: string | null
           name: string
+          next_payment_date: string | null
           notes: string | null
           phone: string | null
           plan: string | null
@@ -175,12 +179,18 @@ export type Database = {
           source: string | null
           state: string | null
           status: string | null
+          subscription_end_date: string | null
+          subscription_plan: string | null
+          subscription_start_date: string | null
+          trial_end_date: string | null
+          trial_start_date: string | null
           updated_at: string
           user_id: string
           user_type: string | null
           value: number | null
         }
         Insert: {
+          amount_paid?: number | null
           company?: string | null
           created_at?: string
           email?: string | null
@@ -189,9 +199,12 @@ export type Database = {
           gender?: string | null
           how_did_you_hear?: string | null
           id?: string
+          is_subscription_active?: boolean | null
+          is_trial_active?: boolean | null
           last_contact?: string | null
           last_name?: string | null
           name: string
+          next_payment_date?: string | null
           notes?: string | null
           phone?: string | null
           plan?: string | null
@@ -199,12 +212,18 @@ export type Database = {
           source?: string | null
           state?: string | null
           status?: string | null
+          subscription_end_date?: string | null
+          subscription_plan?: string | null
+          subscription_start_date?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string
           user_id: string
           user_type?: string | null
           value?: number | null
         }
         Update: {
+          amount_paid?: number | null
           company?: string | null
           created_at?: string
           email?: string | null
@@ -213,9 +232,12 @@ export type Database = {
           gender?: string | null
           how_did_you_hear?: string | null
           id?: string
+          is_subscription_active?: boolean | null
+          is_trial_active?: boolean | null
           last_contact?: string | null
           last_name?: string | null
           name?: string
+          next_payment_date?: string | null
           notes?: string | null
           phone?: string | null
           plan?: string | null
@@ -223,6 +245,11 @@ export type Database = {
           source?: string | null
           state?: string | null
           status?: string | null
+          subscription_end_date?: string | null
+          subscription_plan?: string | null
+          subscription_start_date?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string
           user_id?: string
           user_type?: string | null

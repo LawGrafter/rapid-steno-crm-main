@@ -15,7 +15,7 @@ const EXAM_CATEGORIES = ['Court Exams', 'SSC & other exams'];
 const SOURCES = ['Google', 'Telegram', 'Facebook', 'Instagram', 'YouTube', 'Friend', 'WhatsApp', 'Pamphlet', 'Banner', 'Word of Mouth'];
 const GENDERS = ['Male', 'Female', 'Prefer not to say'];
 const STATUSES = ['New', 'Contacted', 'Qualified', 'Lost'];
-const PLANS = ['No Plan', 'Basic', 'Advanced', 'Premium'];
+const PLANS = ['Trial User', 'Basic Monthly', 'Advanced Quarterly'];
 
 const Leads = () => {
   const { leads, addLead, updateLead, deleteLead } = useCRM();
@@ -294,6 +294,51 @@ const Leads = () => {
                   <span className="text-blue-600">🔍</span>
                   <span className="text-gray-900 font-medium">{lead.how_did_you_hear || lead.source || 'N/A'}</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Trial & Subscription Info */}
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Trial & Subscription</h4>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Trial Status:</span>
+                  <span className={`font-medium ${
+                    lead.is_trial_active ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {lead.is_trial_active ? 'Active' : 'Expired'}
+                  </span>
+                </div>
+                {lead.trial_end_date && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Trial Ends:</span>
+                    <span className="text-gray-900">
+                      {new Date(lead.trial_end_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Subscription:</span>
+                  <span className={`font-medium ${
+                    lead.is_subscription_active ? 'text-green-600' : 'text-orange-600'
+                  }`}>
+                    {lead.subscription_plan || 'Trial User'}
+                  </span>
+                </div>
+                {lead.subscription_end_date && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Sub. Ends:</span>
+                    <span className="text-gray-900">
+                      {new Date(lead.subscription_end_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                {lead.amount_paid && lead.amount_paid > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Amount Paid:</span>
+                    <span className="text-green-600 font-medium">₹{lead.amount_paid}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -736,6 +781,50 @@ const Leads = () => {
               {selectedLead.notes && (
                 <div><strong>Notes:</strong> <p className="mt-1">{selectedLead.notes}</p></div>
               )}
+              
+              {/* Trial & Subscription Details */}
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <h4 className="font-semibold text-sm mb-2">Trial & Subscription Details</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Trial Status:</span>
+                    <span className={selectedLead.is_trial_active ? 'text-green-600' : 'text-red-600'}>
+                      {selectedLead.is_trial_active ? 'Active' : 'Expired'}
+                    </span>
+                  </div>
+                  {selectedLead.trial_end_date && (
+                    <div className="flex justify-between">
+                      <span>Trial Ends:</span>
+                      <span>{new Date(selectedLead.trial_end_date).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>Subscription:</span>
+                    <span className={selectedLead.is_subscription_active ? 'text-green-600' : 'text-orange-600'}>
+                      {selectedLead.subscription_plan || 'Trial User'}
+                    </span>
+                  </div>
+                  {selectedLead.subscription_end_date && (
+                    <div className="flex justify-between">
+                      <span>Subscription Ends:</span>
+                      <span>{new Date(selectedLead.subscription_end_date).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {selectedLead.next_payment_date && (
+                    <div className="flex justify-between">
+                      <span>Next Payment:</span>
+                      <span>{new Date(selectedLead.next_payment_date).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {selectedLead.amount_paid && selectedLead.amount_paid > 0 && (
+                    <div className="flex justify-between">
+                      <span>Amount Paid:</span>
+                      <span className="text-green-600 font-medium">₹{selectedLead.amount_paid}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
               <div className="text-sm text-gray-500">
                 Created: {new Date(selectedLead.created_at).toLocaleString()}
               </div>
