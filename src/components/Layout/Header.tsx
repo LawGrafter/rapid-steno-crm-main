@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, User, ChevronDown, Menu } from 'lucide-react';
+import { useCRM } from '../../context/CRMContext';
 
 const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
   const navigate = useNavigate();
+  const { signOut } = useCRM();
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
+  const handleLogout = async () => {
+    await signOut();
     navigate('/login');
   };
 
