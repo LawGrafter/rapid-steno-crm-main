@@ -2,8 +2,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -19,33 +17,85 @@ function generateOTP(): string {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log('Send OTP function called');
+  console.log('=== Send OTP function called ===');
+  console.log('Method:', req.method);
+  console.log('Headers:', Object.fromEntries(req.headers.entries()));
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    console.log('Handling CORS preflight');
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    console.log('Method not allowed:', req.method);
+    return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
   try {
+    // Check environment variables
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    console.log('Environment check:');
+    console.log('RESEND_API_KEY exists:', !!resendApiKey);
+    console.log('SUPABASE_URL exists:', !!supabaseUrl);
+    console.log('SUPABASE_SERVICE_ROLE_KEY exists:', !!supabaseKey);
+
+    if (!resendApiKey) {
+      throw new Error('RESEND_API_KEY not configured');
+    }
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase environment variables not configured');
+    }
+
+    // Initialize Resend
+    const resend = new Resend(resendApiKey);
+    
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { email }: SendOTPRequest = await req.json();
-    console.log('Sending OTP to:', email);
+    // Parse request body
+    const body = await req.text();
+    console.log('Request body:', body);
+    
+    let requestData: SendOTPRequest;
+    try {
+      requestData = JSON.parse(body);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      throw new Error('Invalid JSON in request body');
+    }
+
+    const { email } = requestData;
+    console.log('Processing OTP request for email:', email);
+
+    if (!email) {
+      throw new Error('Email is required');
+    }
 
     // Generate OTP
     const otpCode = generateOTP();
     console.log('Generated OTP:', otpCode);
 
     // Clean up old OTPs for this email
-    await supabase
+    console.log('Cleaning up old OTPs for email:', email);
+    const { error: deleteError } = await supabase
       .from('admin_otp')
       .delete()
       .eq('email', email);
 
+    if (deleteError) {
+      console.error('Error cleaning up old OTPs:', deleteError);
+      // Don't throw here, just log
+    }
+
     // Store OTP in database
+    console.log('Storing new OTP in database');
     const { error: dbError } = await supabase
       .from('admin_otp')
       .insert({
@@ -55,12 +105,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (dbError) {
       console.error('Database error:', dbError);
-      throw new Error('Failed to store OTP');
+      throw new Error(`Failed to store OTP: ${dbError.message}`);
     }
+
+    console.log('OTP stored successfully, sending email...');
 
     // Send OTP email
     const emailResponse = await resend.emails.send({
-      from: "Rapid Steno CRM <noreply@rapidsteno.com>",
+      from: "Rapid Steno CRM <admin@rapidsteno.com>",
       to: ["info@rapidsteno.com"],
       subject: "🔐 Admin Login OTP - Rapid Steno CRM",
       html: `
@@ -127,7 +179,14 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("Email send result:", emailResponse);
+
+    if (emailResponse.error) {
+      console.error("Resend error:", emailResponse.error);
+      throw new Error(`Failed to send email: ${emailResponse.error.message}`);
+    }
+
+    console.log("Email sent successfully with ID:", emailResponse.data?.id);
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -141,11 +200,16 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: any) {
-    console.error("Error in send-otp function:", error);
+    console.error("=== Error in send-otp function ===");
+    console.error("Error type:", typeof error);
+    console.error("Error message:", error?.message);
+    console.error("Error stack:", error?.stack);
+    console.error("Full error:", error);
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Failed to send OTP' 
+        error: error?.message || 'Failed to send OTP' 
       }),
       {
         status: 500,

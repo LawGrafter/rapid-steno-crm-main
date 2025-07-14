@@ -12,23 +12,60 @@ interface VerifyOTPRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log('Verify OTP function called');
+  console.log('=== Verify OTP function called ===');
+  console.log('Method:', req.method);
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    console.log('Handling CORS preflight');
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    console.log('Method not allowed:', req.method);
+    return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
   try {
+    // Check environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    console.log('Environment check:');
+    console.log('SUPABASE_URL exists:', !!supabaseUrl);
+    console.log('SUPABASE_SERVICE_ROLE_KEY exists:', !!supabaseKey);
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase environment variables not configured');
+    }
+
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { email, otp }: VerifyOTPRequest = await req.json();
-    console.log('Verifying OTP for:', email);
+    // Parse request body
+    const body = await req.text();
+    console.log('Request body:', body);
+    
+    let requestData: VerifyOTPRequest;
+    try {
+      requestData = JSON.parse(body);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      throw new Error('Invalid JSON in request body');
+    }
+
+    const { email, otp } = requestData;
+    console.log('Verifying OTP for email:', email, 'OTP:', otp);
+
+    if (!email || !otp) {
+      throw new Error('Email and OTP are required');
+    }
 
     // Check if OTP exists and is valid
+    console.log('Checking OTP in database...');
     const { data: otpRecord, error: fetchError } = await supabase
       .from('admin_otp')
       .select('*')
@@ -37,6 +74,8 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('used', false)
       .gt('expires_at', new Date().toISOString())
       .single();
+
+    console.log('OTP query result:', { otpRecord, fetchError });
 
     if (fetchError || !otpRecord) {
       console.log('Invalid or expired OTP');
@@ -53,6 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Mark OTP as used
+    console.log('Marking OTP as used...');
     const { error: updateError } = await supabase
       .from('admin_otp')
       .update({ used: true })
@@ -76,11 +116,16 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: any) {
-    console.error("Error in verify-otp function:", error);
+    console.error("=== Error in verify-otp function ===");
+    console.error("Error type:", typeof error);
+    console.error("Error message:", error?.message);
+    console.error("Error stack:", error?.stack);
+    console.error("Full error:", error);
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Failed to verify OTP' 
+        error: error?.message || 'Failed to verify OTP' 
       }),
       {
         status: 500,
