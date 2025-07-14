@@ -80,34 +80,38 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Initialize auth state
   useEffect(() => {
-    // Set up auth state listener
+    let mounted = true;
+    
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!mounted) return;
+        
+        console.log('Auth state change:', event, !!session);
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
         
-        // Clear local storage on sign out
-        if (event === 'SIGNED_OUT') {
-          localStorage.removeItem('isAuthenticated');
-        } else if (event === 'SIGNED_IN') {
-          localStorage.setItem('isAuthenticated', 'true');
+        // Only set loading to false after initial load
+        if (event !== 'INITIAL_SESSION') {
+          setLoading(false);
         }
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      
+      console.log('Initial session check:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
-      if (session) {
-        localStorage.setItem('isAuthenticated', 'true');
-      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Load data when user is authenticated
@@ -150,6 +154,19 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
+    if (!error) {
+      // Clear all state immediately
+      setUser(null);
+      setSession(null);
+      setLeads([]);
+      setCampaigns([]);
+      setEmailLists([]);
+      setTemplates([]);
+      setSelectedLead(null);
+      setSelectedCampaign(null);
+      setSelectedEmailList(null);
+      setSelectedTemplate(null);
+    }
     return { error };
   };
 

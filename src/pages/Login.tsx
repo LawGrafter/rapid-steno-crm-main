@@ -35,10 +35,11 @@ const Login = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/');
+    if (isAuthenticated && !loading) {
+      console.log('Redirecting authenticated user to dashboard');
+      navigate('/dashboard');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, loading, navigate]);
 
   // OTP Timer countdown
   useEffect(() => {
@@ -67,12 +68,26 @@ const Login = () => {
       }
 
       // If login successful, send OTP
+      console.log('Calling send-otp function...');
       const { data, error: otpError } = await supabase.functions.invoke('send-otp', {
-        body: { email: formData.email }
+        body: { email: formData.email },
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
 
-      if (otpError || !data?.success) {
-        setError('Failed to send OTP. Please try again.');
+      console.log('OTP function response:', { data, otpError });
+
+      if (otpError) {
+        console.error('OTP function error:', otpError);
+        setError(`Failed to send OTP: ${otpError.message}`);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data?.success) {
+        console.error('OTP send failed:', data);
+        setError(data?.error || 'Failed to send OTP. Please try again.');
         setIsLoading(false);
         return;
       }
@@ -93,15 +108,29 @@ const Login = () => {
     setError('');
 
     try {
+      console.log('Calling verify-otp function...');
       const { data, error: otpError } = await supabase.functions.invoke('verify-otp', {
         body: { 
           email: formData.email,
           otp: formData.otp 
+        },
+        headers: {
+          'Content-Type': 'application/json',
         }
       });
 
-      if (otpError || !data?.success) {
-        setError('Invalid OTP. Please check and try again.');
+      console.log('Verify OTP response:', { data, otpError });
+
+      if (otpError) {
+        console.error('Verify OTP function error:', otpError);
+        setError(`Failed to verify OTP: ${otpError.message}`);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data?.success) {
+        console.error('OTP verification failed:', data);
+        setError(data?.error || 'Invalid OTP. Please check and try again.');
         setIsLoading(false);
         return;
       }
@@ -120,12 +149,25 @@ const Login = () => {
     setError('');
 
     try {
+      console.log('Calling resend OTP function...');
       const { data, error: otpError } = await supabase.functions.invoke('send-otp', {
-        body: { email: formData.email }
+        body: { email: formData.email },
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
 
-      if (otpError || !data?.success) {
-        setError('Failed to resend OTP. Please try again.');
+      console.log('Resend OTP response:', { data, otpError });
+
+      if (otpError) {
+        console.error('Resend OTP function error:', otpError);
+        setError(`Failed to resend OTP: ${otpError.message}`);
+        return;
+      }
+
+      if (!data?.success) {
+        console.error('Resend OTP failed:', data);
+        setError(data?.error || 'Failed to resend OTP. Please try again.');
         return;
       }
 
@@ -151,7 +193,10 @@ const Login = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary via-primary-light to-primary-hover flex items-center justify-center">
-        <Loader className="w-8 h-8 animate-spin text-white" />
+        <div className="text-center">
+          <Loader className="w-8 h-8 animate-spin text-white mx-auto mb-4" />
+          <p className="text-white">Loading...</p>
+        </div>
       </div>
     );
   }
