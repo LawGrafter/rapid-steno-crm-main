@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Plus, Calendar, Search, Eye, Edit, Trash2, X } from 'lucide-react';
+import { Users, Plus, Search, Eye, Edit, Trash2, X, DollarSign } from 'lucide-react';
 import { useCRM } from '../context/CRMContext';
 import { Lead } from '../types';
 
@@ -16,6 +16,7 @@ const SOURCES = ['Google', 'Telegram', 'Facebook', 'Instagram', 'YouTube', 'Frie
 const GENDERS = ['Male', 'Female', 'Prefer not to say'];
 const STATUSES = ['New', 'Contacted', 'Qualified', 'Lost'];
 const PLANS = ['Trial User', 'Basic Monthly', 'Advanced Quarterly'];
+const AVAILABLE_TAGS = ['legal', 'court-reporting', 'ssc', 'advanced', 'premium', 'urgent'];
 
 const Leads = () => {
   const { leads, addLead, updateLead, deleteLead } = useCRM();
@@ -25,6 +26,7 @@ const Leads = () => {
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [newTag, setNewTag] = useState('');
   
   const [formData, setFormData] = useState({
     first_name: '',
@@ -36,9 +38,19 @@ const Leads = () => {
     exam_category: '',
     how_did_you_hear: '',
     status: 'New',
-    plan: 'No Plan',
+    plan: 'Trial User',
     referral_code: '',
-    notes: ''
+    notes: '',
+    tags: [] as string[],
+    trial_start_date: '',
+    trial_end_date: '',
+    subscription_plan: '',
+    subscription_start_date: '',
+    subscription_end_date: '',
+    amount_paid: 0,
+    next_payment_date: '',
+    is_trial_active: true,
+    is_subscription_active: false
   });
 
   const handleAddLead = async (e: React.FormEvent) => {
@@ -48,7 +60,9 @@ const Leads = () => {
       name: `${formData.first_name} ${formData.last_name}`.trim(),
       company: formData.state,
       source: formData.how_did_you_hear,
-      user_type: 'Trial User'
+      user_type: 'Trial User',
+      trial_start_date: formData.trial_start_date || new Date().toISOString(),
+      trial_end_date: formData.trial_end_date || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
     };
     
     await addLead(leadData);
@@ -66,14 +80,14 @@ const Leads = () => {
 
   // Calculate statistics
   const totalLeads = leads.length;
-  const newLeads = leads.filter(lead => lead.status === 'New').length;
-  const qualifiedLeads = leads.filter(lead => lead.status === 'Qualified').length;
-  const thisMonthLeads = leads.filter(lead => new Date(lead.created_at).getMonth() === new Date().getMonth()).length;
+  const trialUsers = leads.filter(lead => lead.is_trial_active).length;
+  const paidUsers = leads.filter(lead => lead.is_subscription_active).length;
+  const totalRevenue = leads.reduce((sum, lead) => sum + (lead.amount_paid || 0), 0);
 
   const getPlanColor = (plan: string) => {
     switch (plan?.toLowerCase()) {
-      case 'basic': return 'bg-green-100 text-green-800';
-      case 'advanced': return 'bg-blue-100 text-blue-800';
+      case 'basic monthly': return 'bg-green-100 text-green-800';
+      case 'advanced quarterly': return 'bg-blue-100 text-blue-800';
       case 'premium': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -99,9 +113,19 @@ const Leads = () => {
       exam_category: '',
       how_did_you_hear: '',
       status: 'New',
-      plan: 'No Plan',
+      plan: 'Trial User',
       referral_code: '',
-      notes: ''
+      notes: '',
+      tags: [],
+      trial_start_date: '',
+      trial_end_date: '',
+      subscription_plan: '',
+      subscription_start_date: '',
+      subscription_end_date: '',
+      amount_paid: 0,
+      next_payment_date: '',
+      is_trial_active: true,
+      is_subscription_active: false
     });
   };
 
@@ -117,9 +141,19 @@ const Leads = () => {
       exam_category: lead.exam_category || '',
       how_did_you_hear: lead.how_did_you_hear || '',
       status: lead.status || 'New',
-      plan: lead.plan || 'No Plan',
+      plan: lead.plan || 'Trial User',
       referral_code: lead.referral_code || '',
-      notes: lead.notes || ''
+      notes: lead.notes || '',
+      tags: lead.tags || [],
+      trial_start_date: lead.trial_start_date ? lead.trial_start_date.split('T')[0] : '',
+      trial_end_date: lead.trial_end_date ? lead.trial_end_date.split('T')[0] : '',
+      subscription_plan: lead.subscription_plan || '',
+      subscription_start_date: lead.subscription_start_date ? lead.subscription_start_date.split('T')[0] : '',
+      subscription_end_date: lead.subscription_end_date ? lead.subscription_end_date.split('T')[0] : '',
+      amount_paid: lead.amount_paid || 0,
+      next_payment_date: lead.next_payment_date ? lead.next_payment_date.split('T')[0] : '',
+      is_trial_active: lead.is_trial_active ?? true,
+      is_subscription_active: lead.is_subscription_active ?? false
     });
     setShowEditForm(true);
   };
@@ -133,7 +167,7 @@ const Leads = () => {
       name: `${formData.first_name} ${formData.last_name}`.trim(),
       company: formData.state,
       source: formData.how_did_you_hear,
-      user_type: 'Trial User'
+      user_type: formData.is_subscription_active ? 'Paid User' : 'Trial User'
     };
     
     await updateLead(selectedLead.id, updatedData);
@@ -146,6 +180,20 @@ const Leads = () => {
     if (confirm('Are you sure you want to delete this lead?')) {
       await deleteLead(leadId);
     }
+  };
+
+  const addTag = (tag: string) => {
+    if (tag && !formData.tags.includes(tag)) {
+      setFormData({...formData, tags: [...formData.tags, tag]});
+    }
+    setNewTag('');
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData({
+      ...formData,
+      tags: formData.tags.filter(tag => tag !== tagToRemove)
+    });
   };
 
   return (
@@ -182,11 +230,11 @@ const Leads = () => {
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">New Leads</p>
-              <p className="text-2xl font-bold text-gray-900">{newLeads}</p>
+              <p className="text-sm text-gray-600">Trial Users</p>
+              <p className="text-2xl font-bold text-gray-900">{trialUsers}</p>
             </div>
-            <div className="bg-blue-100 p-3 rounded-lg">
-              <Users className="w-6 h-6 text-blue-600" />
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <Users className="w-6 h-6 text-orange-600" />
             </div>
           </div>
         </div>
@@ -194,8 +242,8 @@ const Leads = () => {
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Qualified</p>
-              <p className="text-2xl font-bold text-gray-900">{qualifiedLeads}</p>
+              <p className="text-sm text-gray-600">Paid Users</p>
+              <p className="text-2xl font-bold text-gray-900">{paidUsers}</p>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
               <Users className="w-6 h-6 text-green-600" />
@@ -206,11 +254,11 @@ const Leads = () => {
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">This Month</p>
-              <p className="text-2xl font-bold text-gray-900">{thisMonthLeads}</p>
+              <p className="text-sm text-gray-600">Revenue</p>
+              <p className="text-2xl font-bold text-gray-900">₹{totalRevenue}</p>
             </div>
-            <div className="bg-orange-100 p-3 rounded-lg">
-              <Calendar className="w-6 h-6 text-orange-600" />
+            <div className="bg-purple-100 p-3 rounded-lg">
+              <DollarSign className="w-6 h-6 text-purple-600" />
             </div>
           </div>
         </div>
@@ -259,8 +307,10 @@ const Leads = () => {
                   <p className="text-sm text-gray-500">{lead.email}</p>
                 </div>
               </div>
-              <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                trial
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                lead.is_subscription_active ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+              }`}>
+                {lead.is_subscription_active ? 'paid' : 'trial'}
               </span>
             </div>
 
@@ -275,25 +325,10 @@ const Leads = () => {
                 <span className="text-gray-900 font-medium">{lead.state || 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Exam Category:</span>
-                <span className="text-gray-900 font-medium">{lead.exam_category || 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Plan:</span>
-                <span className={`text-xs px-2 py-1 rounded-full font-medium ${getPlanColor(lead.plan || 'No Plan')}`}>
-                  {lead.plan || 'No Plan'}
+                <span className={`text-xs px-2 py-1 rounded-full font-medium ${getPlanColor(lead.plan || 'Trial User')}`}>
+                  {lead.plan || 'Trial User'}
                 </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">User Type:</span>
-                <span className="text-orange-600 font-medium">{lead.user_type || 'Trial User'}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Source:</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-blue-600">🔍</span>
-                  <span className="text-gray-900 font-medium">{lead.how_did_you_hear || lead.source || 'N/A'}</span>
-                </div>
               </div>
             </div>
 
@@ -325,14 +360,6 @@ const Leads = () => {
                     {lead.subscription_plan || 'Trial User'}
                   </span>
                 </div>
-                {lead.subscription_end_date && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Sub. Ends:</span>
-                    <span className="text-gray-900">
-                      {new Date(lead.subscription_end_date).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
                 {lead.amount_paid && lead.amount_paid > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Amount Paid:</span>
@@ -343,15 +370,15 @@ const Leads = () => {
             </div>
 
             {/* Tags */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">legal</span>
-              <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">court-reporting</span>
-            </div>
-
-            {/* Description */}
-            <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-              {lead.notes || "Interested in shorthand for court proceedings. Currently on 7-day trial."}
-            </p>
+            {lead.tags && lead.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {lead.tags.map((tag, index) => (
+                  <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex items-center justify-between">
@@ -388,7 +415,7 @@ const Leads = () => {
       {/* Add Lead Modal */}
       {showAddForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Add New Lead</h2>
               <button onClick={() => setShowAddForm(false)}>
@@ -396,6 +423,7 @@ const Leads = () => {
               </button>
             </div>
             <form onSubmit={handleAddLead} className="space-y-4">
+              {/* Basic Information */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
@@ -525,6 +553,124 @@ const Leads = () => {
                 </div>
               </div>
 
+              {/* Trial & Subscription Details */}
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold mb-4">Trial & Subscription Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Trial Start Date</label>
+                    <input
+                      type="date"
+                      value={formData.trial_start_date}
+                      onChange={(e) => setFormData({...formData, trial_start_date: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Trial End Date</label>
+                    <input
+                      type="date"
+                      value={formData.trial_end_date}
+                      onChange={(e) => setFormData({...formData, trial_end_date: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subscription Plan</label>
+                    <input
+                      type="text"
+                      value={formData.subscription_plan}
+                      onChange={(e) => setFormData({...formData, subscription_plan: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount Paid</label>
+                    <input
+                      type="number"
+                      value={formData.amount_paid}
+                      onChange={(e) => setFormData({...formData, amount_paid: Number(e.target.value)})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_trial_active}
+                      onChange={(e) => setFormData({...formData, is_trial_active: e.target.checked})}
+                      className="mr-2"
+                    />
+                    <label className="text-sm font-medium text-gray-700">Trial Active</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_subscription_active}
+                      onChange={(e) => setFormData({...formData, is_subscription_active: e.target.checked})}
+                      className="mr-2"
+                    />
+                    <label className="text-sm font-medium text-gray-700">Subscription Active</label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded flex items-center"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="ml-1 text-blue-600 hover:text-blue-800"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag(newTag))}
+                    placeholder="Add a tag..."
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addTag(newTag)}
+                    className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {AVAILABLE_TAGS.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => addTag(tag)}
+                      className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200"
+                    >
+                      + {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Referral Code</label>
                 <input
@@ -568,7 +714,7 @@ const Leads = () => {
       {/* Edit Lead Modal */}
       {showEditForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Edit Lead</h2>
               <button onClick={() => setShowEditForm(false)}>
@@ -705,6 +851,91 @@ const Leads = () => {
                 </div>
               </div>
 
+              {/* Trial & Subscription Details */}
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold mb-4">Trial & Subscription Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Trial Start Date</label>
+                    <input
+                      type="date"
+                      value={formData.trial_start_date}
+                      onChange={(e) => setFormData({...formData, trial_start_date: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Trial End Date</label>
+                    <input
+                      type="date"
+                      value={formData.trial_end_date}
+                      onChange={(e) => setFormData({...formData, trial_end_date: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount Paid</label>
+                    <input
+                      type="number"
+                      value={formData.amount_paid}
+                      onChange={(e) => setFormData({...formData, amount_paid: Number(e.target.value)})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_subscription_active}
+                      onChange={(e) => setFormData({...formData, is_subscription_active: e.target.checked})}
+                      className="mr-2"
+                    />
+                    <label className="text-sm font-medium text-gray-700">Subscription Active</label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tags section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded flex items-center"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="ml-1 text-blue-600 hover:text-blue-800"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag(newTag))}
+                    placeholder="Add a tag..."
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addTag(newTag)}
+                    className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Referral Code</label>
                 <input
@@ -765,6 +996,7 @@ const Leads = () => {
                   <p className="text-gray-500">{selectedLead.email}</p>
                 </div>
               </div>
+              
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><strong>Phone:</strong> {selectedLead.phone || 'N/A'}</div>
                 <div><strong>State:</strong> {selectedLead.state || 'N/A'}</div>
@@ -775,6 +1007,21 @@ const Leads = () => {
                 <div><strong>Status:</strong> {selectedLead.status}</div>
                 <div><strong>User Type:</strong> {selectedLead.user_type || 'Trial User'}</div>
               </div>
+
+              {/* Tags */}
+              {selectedLead.tags && selectedLead.tags.length > 0 && (
+                <div>
+                  <strong>Tags:</strong>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedLead.tags.map((tag, index) => (
+                      <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {selectedLead.referral_code && (
                 <div><strong>Referral Code:</strong> {selectedLead.referral_code}</div>
               )}
