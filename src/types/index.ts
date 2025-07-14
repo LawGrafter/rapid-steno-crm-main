@@ -29,6 +29,7 @@ export interface Lead {
   next_payment_date?: string | null;
   is_trial_active?: boolean | null;
   is_subscription_active?: boolean | null;
+  tags?: string[] | null;
   created_at: string;
   updated_at: string;
 }
