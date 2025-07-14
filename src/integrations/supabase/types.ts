@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          created_at: string
+          id: string
+          page_name: string
+          page_url: string | null
+          time_spent: number | null
+          timestamp: string
+          user_id: string
+          visit_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          page_name: string
+          page_url?: string | null
+          time_spent?: number | null
+          timestamp?: string
+          user_id: string
+          visit_date?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          page_name?: string
+          page_url?: string | null
+          time_spent?: number | null
+          timestamp?: string
+          user_id?: string
+          visit_date?: string
+        }
+        Relationships: []
+      }
       admin_otp: {
         Row: {
           created_at: string
@@ -288,6 +321,42 @@ export type Database = {
           full_name?: string | null
           id?: string
           role?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_activities: {
+        Row: {
+          created_at: string
+          daily_time_spent: number | null
+          id: string
+          last_active: string | null
+          login_count: number | null
+          subscription_days_left: number | null
+          total_time_spent: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_time_spent?: number | null
+          id?: string
+          last_active?: string | null
+          login_count?: number | null
+          subscription_days_left?: number | null
+          total_time_spent?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_time_spent?: number | null
+          id?: string
+          last_active?: string | null
+          login_count?: number | null
+          subscription_days_left?: number | null
+          total_time_spent?: number | null
           updated_at?: string
           user_id?: string
         }
