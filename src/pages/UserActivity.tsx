@@ -1,24 +1,20 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Clock, 
   Calendar, 
   Activity, 
-  User, 
   Search, 
-  Filter, 
   Download, 
   Eye, 
   TrendingUp,
   BarChart3,
   Users,
-  PlayCircle,
-  Settings,
   BookOpen,
   Zap,
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
-import { UserActivity as UserActivityType, ActivityLog, ActivityEntry } from '../types';
+import { UserActivity as UserActivityType } from '../types';
 
 const UserActivity = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -143,7 +139,7 @@ const UserActivity = () => {
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'Settings': return <Settings className="w-4 h-4 text-gray-600" />;
+      case 'Settings': return <Eye className="w-4 h-4 text-gray-600" />;
       case 'Court Dictation': return <BookOpen className="w-4 h-4 text-blue-600" />;
       case 'MyGrowth': return <TrendingUp className="w-4 h-4 text-green-600" />;
       case 'SpeedBoosterDictations': return <Zap className="w-4 h-4 text-orange-600" />;

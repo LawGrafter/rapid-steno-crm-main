@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Plus, 
   Search, 
@@ -10,12 +10,8 @@ import {
   Eye, 
   ArrowLeft,
   Mail,
-  Clock,
   Users,
-  Settings,
   Save,
-  X,
-  ChevronDown,
   Calendar,
   Zap,
   BarChart3,
@@ -58,7 +54,6 @@ const Workflows = () => {
   const [currentView, setCurrentView] = useState<'list' | 'create' | 'edit'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
 
   // Mock workflow data
   const [workflows] = useState<Workflow[]>([

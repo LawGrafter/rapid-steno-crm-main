@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   CreditCard,
   Users,
@@ -7,26 +7,16 @@ import {
   XCircle,
   AlertCircle,
   Search,
-  Filter,
   Download,
   Send,
   Plus,
   Eye,
   FileText,
-  Calendar,
   DollarSign,
   TrendingUp,
-  Mail,
   Bell,
   RefreshCw,
-  Edit,
-  Trash2,
   X,
-  User,
-  Building,
-  Phone,
-  MapPin,
-  Hash,
   LayoutDashboard
 } from 'lucide-react';
 import { Payment, Invoice } from '../types';

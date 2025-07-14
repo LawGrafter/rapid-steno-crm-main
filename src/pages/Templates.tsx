@@ -1,17 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Plus, 
   Search, 
   Eye, 
   Edit, 
   Copy, 
-  Trash2, 
   Mail, 
   FileText, 
   Code, 
-  Layout,
   Save,
-  Send,
   ArrowLeft,
   Bold,
   Italic,
@@ -22,15 +19,9 @@ import {
   AlignCenter,
   AlignRight,
   List,
-  ListOrdered,
-  Palette,
-  Type,
-  Settings,
   User,
   Calendar,
-  Building,
-  Tag,
-  X
+  Tag
 } from 'lucide-react';
 
 interface EmailTemplate {
@@ -49,7 +40,6 @@ interface EmailTemplate {
 
 const Templates = () => {
   const [currentStep, setCurrentStep] = useState<'list' | 'create' | 'edit'>('list');
-  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [editorMode, setEditorMode] = useState<'simple' | 'code'>('simple');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -209,7 +199,6 @@ const Templates = () => {
   };
 
   const handleEditTemplate = (template: EmailTemplate) => {
-    setSelectedTemplate(template);
     setNewTemplate({
       name: template.name,
       subject: template.subject,

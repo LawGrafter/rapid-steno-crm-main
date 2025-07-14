@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useCRM } from '../context/CRMContext';
+import { useState } from 'react';
 import { 
   Plus, 
   Search, 
@@ -7,7 +6,6 @@ import {
   Mail, 
   MoreHorizontal, 
   Edit, 
-  Trash2, 
   Download, 
   Upload,
   Filter,
@@ -32,7 +30,6 @@ interface EmailList {
 }
 
 const Lists = () => {
-  const { state } = useCRM();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateList, setShowCreateList] = useState(false);
