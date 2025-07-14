@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useCRM } from '../context/CRMContext';
 import {
-  TrendingUp,
-  Users,
   Mail,
   Eye,
   MousePointer,
   DollarSign,
-  Calendar,
   Download
 } from 'lucide-react';
 import {

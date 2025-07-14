@@ -38,7 +38,7 @@ const Login = () => {
   };
 
   React.useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: number;
     if (step === 'otp' && otpData.timeLeft > 0) {
       timer = setTimeout(() => {
         setOtpData(prev => ({ ...prev, timeLeft: prev.timeLeft - 1 }));

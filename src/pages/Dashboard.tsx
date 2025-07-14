@@ -1,4 +1,3 @@
-import React from 'react';
 import { useCRM } from '../context/CRMContext';
 import {
   Users,
@@ -6,9 +5,7 @@ import {
   TrendingUp,
   DollarSign,
   Eye,
-  MousePointer,
-  Calendar,
-  Activity,
+  
   CreditCard,
   Clock,
   CheckCircle,

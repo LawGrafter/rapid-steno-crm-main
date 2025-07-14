@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { 
   Plus, 
@@ -9,14 +9,10 @@ import {
   MousePointer, 
   MoreHorizontal, 
   Play, 
-  Pause, 
   Edit,
   ArrowLeft,
   Mail,
-  Send,
-  Clock,
   CheckCircle,
-  User,
   FileText,
   Settings,
   X,
@@ -801,7 +797,7 @@ const Campaigns = () => {
                         name="schedule"
                         value="now"
                         checked={campaignBuilder.schedule.type === 'now'}
-                        onChange={(e) => setCampaignBuilder({
+                        onChange={() => setCampaignBuilder({
                           ...campaignBuilder,
                           schedule: { ...campaignBuilder.schedule, type: 'now' }
                         })}
@@ -815,7 +811,7 @@ const Campaigns = () => {
                         name="schedule"
                         value="later"
                         checked={campaignBuilder.schedule.type === 'later'}
-                        onChange={(e) => setCampaignBuilder({
+                        onChange={() => setCampaignBuilder({
                           ...campaignBuilder,
                           schedule: { ...campaignBuilder.schedule, type: 'later' }
                         })}
