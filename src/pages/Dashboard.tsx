@@ -14,7 +14,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const Dashboard = () => {
-  const { state } = useCRM();
+  const { leads, campaigns } = useCRM();
 
   // Mock payment data for dashboard
   const paymentStats = {

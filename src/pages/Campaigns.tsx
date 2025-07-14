@@ -46,7 +46,7 @@ interface CampaignBuilder {
 }
 
 const Campaigns = () => {
-  const { state } = useCRM();
+  const { campaigns } = useCRM();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentStep, setCurrentStep] = useState<'list' | 'builder'>('list');

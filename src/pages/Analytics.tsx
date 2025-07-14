@@ -25,7 +25,7 @@ import {
 } from 'recharts';
 
 const Analytics = () => {
-  const { state } = useCRM();
+  const { leads, campaigns } = useCRM();
   const [dateRange, setDateRange] = useState('30d');
 
   const performanceData = [
