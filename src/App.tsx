@@ -16,6 +16,7 @@ import Domains from './pages/Domains';
 import Settings from './pages/Settings';
 import UserActivity from './pages/UserActivity';
 import Workflows from './pages/Workflows';
+import TestIntegration from './pages/TestIntegration';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -163,6 +164,19 @@ function App() {
                   <Header onMenuClick={() => setSidebarOpen(true)} />
                   <main className="flex-1 overflow-auto">
                     <Settings />
+                  </main>
+                </div>
+              </div>
+            </ProtectedRoute>
+          } />
+          <Route path="/test-integration" element={
+            <ProtectedRoute>
+              <div className="min-h-screen bg-gray-50 font-lexend">
+                <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+                <div className="lg:ml-64 flex flex-col min-h-screen">
+                  <Header onMenuClick={() => setSidebarOpen(true)} />
+                  <main className="flex-1 overflow-auto">
+                    <TestIntegration />
                   </main>
                 </div>
               </div>

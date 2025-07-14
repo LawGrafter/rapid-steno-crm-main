@@ -24,12 +24,19 @@ serve(async (req) => {
     console.log('Received activity logs for:', email, `${activityLogs?.length || 0} logs`)
 
     // Find user by email
-    const { data: authUser, error: authError } = await supabaseClient.auth.admin.getUserByEmail(email)
-    if (authError || !authUser.user) {
-      throw new Error(`User not found: ${email}`)
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const userResp = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
+      headers: {
+        apikey: SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      },
+    });
+    const users = await userResp.json();
+    if (!users.length) {
+      throw new Error(`User not found: ${email}`);
     }
-
-    const userId = authUser.user.id
+    const userId = users[0].id;
 
     // Insert activity logs (batch insert)
     const logsToInsert = activityLogs.map((log: any) => ({
