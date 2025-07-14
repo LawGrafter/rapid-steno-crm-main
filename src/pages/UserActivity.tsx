@@ -75,10 +75,13 @@ const UserActivity = () => {
 
   const totalActiveUsers = userActivities.length;
   const totalTimeSpent = userActivities.reduce((sum, user) => sum + user.totalTimeAllTime, 0);
-  const averageSessionTime = Math.round(totalTimeSpent / userActivities.reduce((sum, user) => sum + user.totalSessions, 0));
-  const mostActiveUser = userActivities.reduce((prev, current) => 
-    prev.totalTimeAllTime > current.totalTimeAllTime ? prev : current
-  );
+  const totalSessions = userActivities.reduce((sum, user) => sum + user.totalSessions, 0);
+  const averageSessionTime = totalSessions > 0 ? Math.round(totalTimeSpent / totalSessions) : 0;
+  const mostActiveUser = userActivities.length > 0 
+    ? userActivities.reduce((prev, current) => 
+        prev.totalTimeAllTime > current.totalTimeAllTime ? prev : current
+      )
+    : null;
 
   if (loading) {
     return (
@@ -184,8 +187,12 @@ const UserActivity = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 font-medium">Most Active User</p>
-              <p className="text-lg font-bold text-gray-900 mt-1">{mostActiveUser.userName}</p>
-              <p className="text-xs text-gray-500">{formatTime(mostActiveUser.totalTimeAllTime)}</p>
+              <p className="text-lg font-bold text-gray-900 mt-1">
+                {mostActiveUser ? mostActiveUser.userName : 'No data'}
+              </p>
+              <p className="text-xs text-gray-500">
+                {mostActiveUser ? formatTime(mostActiveUser.totalTimeAllTime) : '0 min'}
+              </p>
             </div>
             <div className="bg-orange-500 p-3 rounded-lg">
               <TrendingUp className="w-6 h-6 text-white" />
