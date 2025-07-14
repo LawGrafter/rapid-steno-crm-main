@@ -160,45 +160,72 @@ export type Database = {
           company: string | null
           created_at: string
           email: string | null
+          exam_category: string | null
+          first_name: string | null
+          gender: string | null
+          how_did_you_hear: string | null
           id: string
           last_contact: string | null
+          last_name: string | null
           name: string
           notes: string | null
           phone: string | null
+          plan: string | null
+          referral_code: string | null
           source: string | null
+          state: string | null
           status: string | null
           updated_at: string
           user_id: string
+          user_type: string | null
           value: number | null
         }
         Insert: {
           company?: string | null
           created_at?: string
           email?: string | null
+          exam_category?: string | null
+          first_name?: string | null
+          gender?: string | null
+          how_did_you_hear?: string | null
           id?: string
           last_contact?: string | null
+          last_name?: string | null
           name: string
           notes?: string | null
           phone?: string | null
+          plan?: string | null
+          referral_code?: string | null
           source?: string | null
+          state?: string | null
           status?: string | null
           updated_at?: string
           user_id: string
+          user_type?: string | null
           value?: number | null
         }
         Update: {
           company?: string | null
           created_at?: string
           email?: string | null
+          exam_category?: string | null
+          first_name?: string | null
+          gender?: string | null
+          how_did_you_hear?: string | null
           id?: string
           last_contact?: string | null
+          last_name?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
+          plan?: string | null
+          referral_code?: string | null
           source?: string | null
+          state?: string | null
           status?: string | null
           updated_at?: string
           user_id?: string
+          user_type?: string | null
           value?: number | null
         }
         Relationships: []

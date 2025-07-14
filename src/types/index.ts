@@ -3,9 +3,18 @@ export interface Lead {
   id: string;
   user_id: string;
   name: string;
+  first_name?: string | null;
+  last_name?: string | null;
   email?: string | null;
   phone?: string | null;
   company?: string | null;
+  state?: string | null;
+  gender?: string | null;
+  exam_category?: string | null;
+  how_did_you_hear?: string | null;
+  plan?: string | null;
+  referral_code?: string | null;
+  user_type?: string | null;
   source?: string | null;
   status: string | null;
   notes?: string | null;
