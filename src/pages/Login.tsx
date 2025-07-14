@@ -6,18 +6,16 @@ import {
   Lock, 
   Eye, 
   EyeOff, 
-  Zap, 
   ArrowRight, 
   CheckCircle,
   AlertCircle,
   Loader,
-  UserPlus
+  Shield
 } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, isAuthenticated, loading } = useCRM();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const { signIn, isAuthenticated, loading } = useCRM();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -25,8 +23,7 @@ const Login = () => {
   
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    fullName: ''
+    password: ''
   });
 
   // Redirect if already authenticated
@@ -43,21 +40,12 @@ const Login = () => {
     setSuccess('');
 
     try {
-      if (mode === 'login') {
-        const { error } = await signIn(formData.email, formData.password);
-        if (error) {
-          setError(error.message || 'Login failed. Please check your credentials.');
-        } else {
-          setSuccess('Login successful! Redirecting...');
-          setTimeout(() => navigate('/'), 1000);
-        }
+      const { error } = await signIn(formData.email, formData.password);
+      if (error) {
+        setError(error.message || 'Login failed. Please check your credentials.');
       } else {
-        const { error } = await signUp(formData.email, formData.password, formData.fullName);
-        if (error) {
-          setError(error.message || 'Sign up failed. Please try again.');
-        } else {
-          setSuccess('Account created successfully! Please check your email to verify your account.');
-        }
+        setSuccess('Login successful! Redirecting...');
+        setTimeout(() => navigate('/'), 1000);
       }
     } catch (err: any) {
       setError('An unexpected error occurred. Please try again.');
@@ -84,20 +72,20 @@ const Login = () => {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-2xl mb-4 shadow-lg">
-            <Zap className="w-8 h-8 text-white" />
+            <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Rapid Steno</h1>
-          <p className="text-gray-200">CRM Dashboard</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Rapid Steno CRM</h1>
+          <p className="text-gray-200">Admin Access Portal</p>
         </div>
 
         {/* Auth Form */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+              Admin Login
             </h2>
             <p className="text-gray-600">
-              {mode === 'login' ? 'Sign in to access your dashboard' : 'Sign up to get started'}
+              Sign in to access the internal CRM system
             </p>
           </div>
 
@@ -116,29 +104,15 @@ const Login = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {mode === 'signup' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-colors"
-                  placeholder="Enter your full name"
-                  value={formData.fullName}
-                  onChange={(e) => handleInputChange('fullName', e.target.value)}
-                />
-              </div>
-            )}
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Admin Email</label>
               <div className="relative">
                 <Mail className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="email"
                   required
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-colors"
-                  placeholder="Enter your email"
+                  placeholder="admin@rapidsteno.com"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                 />
@@ -153,7 +127,7 @@ const Login = () => {
                   type={showPassword ? 'text' : 'password'}
                   required
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-colors"
-                  placeholder="Enter your password"
+                  placeholder="Enter admin password"
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                 />
@@ -176,48 +150,29 @@ const Login = () => {
                 <Loader className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  {mode === 'login' ? (
-                    <>
-                      <span>Sign In</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-5 h-5" />
-                      <span>Sign Up</span>
-                    </>
-                  )}
+                  <span>Access CRM</span>
+                  <ArrowRight className="w-5 h-5" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Mode Toggle */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              {mode === 'login' ? "Don't have an account?" : "Already have an account?"}
-              <button
-                onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-                className="ml-1 text-accent hover:text-accent-hover font-medium"
-              >
-                {mode === 'login' ? 'Sign up' : 'Sign in'}
-              </button>
+          {/* Admin Notice */}
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <Shield className="w-4 h-4 text-blue-600" />
+              <p className="text-sm text-blue-800 font-medium">Internal System Access</p>
+            </div>
+            <p className="text-sm text-blue-700">
+              This is an internal CRM system. Access is restricted to authorized administrators only.
             </p>
           </div>
-
-          {/* Demo Info */}
-          {mode === 'login' && (
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800 font-medium mb-2">Demo Mode:</p>
-              <p className="text-sm text-blue-700">Create a new account or use existing credentials</p>
-            </div>
-          )}
         </div>
 
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-gray-200 text-sm">
-            © 2024 Rapid Steno. All rights reserved.
+            © 2024 Rapid Steno. Internal CRM System.
           </p>
         </div>
       </div>
