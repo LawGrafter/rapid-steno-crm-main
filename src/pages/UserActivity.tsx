@@ -12,124 +12,20 @@ import {
   BookOpen,
   Zap,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
-import { UserActivity as UserActivityType } from '../types';
+import { useUserActivity } from '../hooks/useUserActivity';
 
 const UserActivity = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('7d');
   const [activityFilter, setActivityFilter] = useState('all');
-  const [selectedUser, setSelectedUser] = useState<UserActivityType | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
 
-  // Mock user activity data based on your image
-  const [userActivities] = useState<UserActivityType[]>([
-    {
-      userId: '1',
-      userName: 'Rajesh Kumar',
-      userEmail: 'rajesh.kumar@lawfirm.in',
-      totalTimeAllTime: 1247, // minutes
-      lastActiveDate: new Date('2025-06-29'),
-      averageDailyTime: 12,
-      totalSessions: 45,
-      favoriteActivity: 'Court Dictation',
-      loginCount: 127,
-      activityLogs: [
-        {
-          id: 'log1',
-          date: '2025-06-26',
-          dailyTimeSpent: 0,
-          totalTimeSpent: 7,
-          activities: [
-            { id: 'a1', type: 'Settings', timeSpent: 2, views: 6, timestamp: new Date('2025-06-26T09:00:00') },
-            { id: 'a2', type: 'Court Dictation', timeSpent: 2, views: 1, timestamp: new Date('2025-06-26T10:00:00') },
-            { id: 'a3', type: 'MyGrowth', timeSpent: 3, views: 6, timestamp: new Date('2025-06-26T11:00:00') }
-          ]
-        },
-        {
-          id: 'log2',
-          date: '2025-06-27',
-          dailyTimeSpent: 0,
-          totalTimeSpent: 16,
-          activities: [
-            { id: 'a4', type: 'Settings', timeSpent: 3, views: 5, timestamp: new Date('2025-06-27T09:00:00') },
-            { id: 'a5', type: 'SpeedBoosterDictations', timeSpent: 5, views: 6, timestamp: new Date('2025-06-27T10:00:00') },
-            { id: 'a6', type: 'MyGrowth', timeSpent: 9, views: 6, timestamp: new Date('2025-06-27T11:00:00') },
-            { id: 'a7', type: 'Court Dictation', timeSpent: 1, views: 5, timestamp: new Date('2025-06-27T14:00:00') }
-          ]
-        },
-        {
-          id: 'log3',
-          date: '2025-06-28',
-          dailyTimeSpent: 0,
-          totalTimeSpent: 0,
-          activities: [
-            { id: 'a8', type: 'MyGrowth', timeSpent: 0, views: 1, timestamp: new Date('2025-06-28T09:00:00') }
-          ]
-        },
-        {
-          id: 'log4',
-          date: '2025-06-29',
-          dailyTimeSpent: 0,
-          totalTimeSpent: 18,
-          activities: [
-            { id: 'a9', type: 'Settings', timeSpent: 0, views: 2, timestamp: new Date('2025-06-29T09:00:00') },
-            { id: 'a10', type: 'MyGrowth', timeSpent: 17, views: 18, timestamp: new Date('2025-06-29T10:00:00') },
-            { id: 'a11', type: 'SpeedBoosterDictations', timeSpent: 0, views: 2, timestamp: new Date('2025-06-29T15:00:00') },
-            { id: 'a12', type: 'Court Dictation', timeSpent: 0, views: 1, timestamp: new Date('2025-06-29T16:00:00') }
-          ]
-        }
-      ]
-    },
-    {
-      userId: '2',
-      userName: 'Priya Sharma',
-      userEmail: 'priya.sharma@newstoday.com',
-      totalTimeAllTime: 2156,
-      lastActiveDate: new Date('2025-06-29'),
-      averageDailyTime: 25,
-      totalSessions: 78,
-      favoriteActivity: 'MyGrowth',
-      loginCount: 89,
-      activityLogs: [
-        {
-          id: 'log5',
-          date: '2025-06-29',
-          dailyTimeSpent: 0,
-          totalTimeSpent: 32,
-          activities: [
-            { id: 'a13', type: 'MyGrowth', timeSpent: 25, views: 12, timestamp: new Date('2025-06-29T09:00:00') },
-            { id: 'a14', type: 'Settings', timeSpent: 4, views: 3, timestamp: new Date('2025-06-29T11:00:00') },
-            { id: 'a15', type: 'Court Dictation', timeSpent: 3, views: 2, timestamp: new Date('2025-06-29T14:00:00') }
-          ]
-        }
-      ]
-    },
-    {
-      userId: '3',
-      userName: 'Amit Patel',
-      userEmail: 'amit.patel@freelance.com',
-      totalTimeAllTime: 892,
-      lastActiveDate: new Date('2025-06-28'),
-      averageDailyTime: 15,
-      totalSessions: 32,
-      favoriteActivity: 'SpeedBoosterDictations',
-      loginCount: 45,
-      activityLogs: [
-        {
-          id: 'log6',
-          date: '2025-06-28',
-          dailyTimeSpent: 0,
-          totalTimeSpent: 22,
-          activities: [
-            { id: 'a16', type: 'SpeedBoosterDictations', timeSpent: 15, views: 8, timestamp: new Date('2025-06-28T10:00:00') },
-            { id: 'a17', type: 'MyGrowth', timeSpent: 7, views: 4, timestamp: new Date('2025-06-28T12:00:00') }
-          ]
-        }
-      ]
-    }
-  ]);
+  const { userActivities, loading, error, refetch } = useUserActivity();
 
   const filteredUsers = userActivities.filter(user => {
     const matchesSearch = user.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -183,6 +79,47 @@ const UserActivity = () => {
   const mostActiveUser = userActivities.reduce((prev, current) => 
     prev.totalTimeAllTime > current.totalTimeAllTime ? prev : current
   );
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-64">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span className="text-gray-600">Loading user activity data...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Data</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={refetch}
+            className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-hover transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (userActivities.length === 0) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No User Activity Data</h3>
+          <p className="text-gray-600">No user activity data has been synced yet.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
