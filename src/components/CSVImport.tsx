@@ -25,6 +25,12 @@ const CSVImport: React.FC<CSVImportProps> = ({ isOpen, onClose }) => {
   const [uploadStatus, setUploadStatus] = useState<{
     type: 'success' | 'error' | 'info' | null;
     message: string;
+    details?: {
+      added: number;
+      updated: number;
+      skipped: number;
+      errors: string[];
+    };
   }>({ type: null, message: '' });
   const [previewData, setPreviewData] = useState<CSVRow[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,6 +41,7 @@ const CSVImport: React.FC<CSVImportProps> = ({ isOpen, onClose }) => {
     { key: 'last_name', label: 'Last Name', required: false },
     { key: 'email', label: 'Email', required: false },
     { key: 'phone', label: 'Phone', required: false },
+    { key: 'ip_address', label: 'IP Address', required: false },
     { key: 'state', label: 'State', required: false },
     { key: 'gender', label: 'Gender', required: false },
     { key: 'exam_category', label: 'Exam Category', required: false },
@@ -45,7 +52,14 @@ const CSVImport: React.FC<CSVImportProps> = ({ isOpen, onClose }) => {
     { key: 'notes', label: 'Notes', required: false },
     { key: 'tags', label: 'Tags', required: false },
     { key: 'amount_paid', label: 'Amount Paid', required: false },
-    { key: 'subscription_plan', label: 'Subscription Plan', required: false }
+    { key: 'subscription_plan', label: 'Subscription Plan', required: false },
+    { key: 'trial_start_date', label: 'Trial Start Date', required: false },
+    { key: 'trial_end_date', label: 'Trial End Date', required: false },
+    { key: 'is_trial_active', label: 'Trial Active', required: false },
+    { key: 'subscription_start_date', label: 'Subscription Start Date', required: false },
+    { key: 'subscription_end_date', label: 'Subscription End Date', required: false },
+    { key: 'is_subscription_active', label: 'Subscription Active', required: false },
+    { key: 'next_payment_date', label: 'Next Payment Date', required: false }
   ];
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,41 +178,204 @@ const CSVImport: React.FC<CSVImportProps> = ({ isOpen, onClose }) => {
     }));
   };
 
-  const transformData = (): Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] => {
-    return csvData.map(row => {
-      const transformed: any = {
-        name: '',
-        status: 'New',
-        is_trial_active: true,
-        is_subscription_active: false,
-        amount_paid: 0
-      };
+  // Function to safely parse date strings with multiple format support
+  const safeParseDate = (dateString: string): string | null => {
+    if (!dateString || !dateString.trim()) return null;
+    
+    try {
+      let date: Date;
+      const trimmedDate = dateString.trim();
+      
+      // Handle DD-MM-YYYY format (like 26-06-2025)
+      if (/^\d{2}-\d{2}-\d{4}$/.test(trimmedDate)) {
+        const [day, month, year] = trimmedDate.split('-');
+        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      }
+      // Handle YYYY-MM-DD format (like 2025-06-26)
+      else if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)) {
+        date = new Date(trimmedDate);
+      }
+      // Handle MM/DD/YYYY format (like 06/26/2025)
+      else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmedDate)) {
+        date = new Date(trimmedDate);
+      }
+      // Handle DD/MM/YYYY format (like 26/06/2025)
+      else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmedDate)) {
+        const [day, month, year] = trimmedDate.split('/');
+        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      }
+      // Default to standard Date constructor
+      else {
+        date = new Date(trimmedDate);
+      }
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.warn(`Invalid date format: ${dateString}`);
+        return null;
+      }
+      
+      console.log(`Successfully parsed date: ${dateString} -> ${date.toISOString()}`);
+      return date.toISOString();
+    } catch (error) {
+      console.warn(`Error parsing date: ${dateString}`, error);
+      return null;
+    }
+  };
 
-      // Map fields based on fieldMapping
-      Object.entries(fieldMapping).forEach(([csvHeader, fieldKey]) => {
-        const value = row[csvHeader];
-        if (value) {
-          if (fieldKey === 'amount_paid') {
-            transformed[fieldKey] = parseFloat(value) || 0;
-          } else if (fieldKey === 'tags') {
-            transformed[fieldKey] = value.split(',').map((tag: string) => tag.trim()).filter(Boolean);
-          } else {
-            transformed[fieldKey] = value;
+  // Function to calculate trial end date (15 days from trial start date)
+  const calculateTrialEndDate = (trialStartDate: string): string => {
+    if (!trialStartDate) return '';
+    
+    try {
+      const startDate = new Date(trialStartDate);
+      if (isNaN(startDate.getTime())) {
+        console.warn(`Invalid trial start date: ${trialStartDate}`);
+        return '';
+      }
+      const endDate = new Date(startDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+      return endDate.toISOString();
+    } catch (error) {
+      console.warn(`Error calculating trial end date for: ${trialStartDate}`, error);
+      return '';
+    }
+  };
+
+  const transformData = (): Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] => {
+    return csvData.map((row, index) => {
+      try {
+        const transformed: any = {
+          name: '',
+          status: 'Active',
+          is_trial_active: true,
+          is_subscription_active: false,
+          amount_paid: 0
+        };
+
+        // Map fields based on fieldMapping
+        Object.entries(fieldMapping).forEach(([csvHeader, fieldKey]) => {
+          const value = row[csvHeader];
+          if (value) {
+            try {
+              if (fieldKey === 'amount_paid') {
+                transformed[fieldKey] = parseFloat(value) || 0;
+              } else if (fieldKey === 'tags') {
+                transformed[fieldKey] = value.split(',').map((tag: string) => tag.trim()).filter(Boolean);
+              } else if (fieldKey === 'is_trial_active' || fieldKey === 'is_subscription_active') {
+                // Handle boolean fields
+                transformed[fieldKey] = value.toLowerCase() === 'true' || value.toLowerCase() === 'yes' || value === '1';
+              } else if (fieldKey === 'status') {
+                // Map status values to new format
+                const status = value.toString().toLowerCase();
+                if (status.includes('active') || status === 'new' || status === 'contacted' || status === 'qualified') {
+                  transformed[fieldKey] = 'Active';
+                } else if (status.includes('inactive') || status === 'lost' || status === 'expired') {
+                  transformed[fieldKey] = 'Inactive';
+                } else {
+                  // Default to Active for unknown status values
+                  console.warn(`Unknown status "${value}" in row ${index + 1}, defaulting to "Active"`);
+                  transformed[fieldKey] = 'Active';
+                }
+              } else if (fieldKey.includes('_date') || fieldKey.includes('_start') || fieldKey.includes('_end')) {
+                // Handle date fields safely with debugging
+                console.log(`Processing date field ${fieldKey} with value "${value}" in row ${index + 1}`);
+                const parsedDate = safeParseDate(value);
+                if (parsedDate) {
+                  transformed[fieldKey] = parsedDate;
+                  console.log(`Successfully set ${fieldKey} to ${parsedDate}`);
+                } else {
+                  console.warn(`Failed to parse date for ${fieldKey}: "${value}" in row ${index + 1}`);
+                }
+              } else {
+                transformed[fieldKey] = value;
+              }
+            } catch (fieldError) {
+              console.warn(`Error processing field ${fieldKey} with value "${value}" in row ${index + 1}:`, fieldError);
+            }
+          }
+        });
+
+        // Generate name from first_name and last_name if available
+        if (transformed.first_name || transformed.last_name) {
+          transformed.name = `${transformed.first_name || ''} ${transformed.last_name || ''}`.trim();
+        }
+
+        // Set default values
+        if (!transformed.name && (transformed.first_name || transformed.last_name)) {
+          transformed.name = `${transformed.first_name || ''} ${transformed.last_name || ''}`.trim();
+        }
+
+        // Auto-calculate trial end date if trial start date is provided
+        if (transformed.trial_start_date && !transformed.trial_end_date) {
+          const calculatedEndDate = calculateTrialEndDate(transformed.trial_start_date);
+          if (calculatedEndDate) {
+            transformed.trial_end_date = calculatedEndDate;
           }
         }
-      });
 
-      // Generate name from first_name and last_name if available
-      if (transformed.first_name || transformed.last_name) {
-        transformed.name = `${transformed.first_name || ''} ${transformed.last_name || ''}`.trim();
+        // Map subscription plan values to new format
+        if (transformed.subscription_plan) {
+          const plan = transformed.subscription_plan.toString().toLowerCase();
+          if (plan.includes('trial') || plan === 'trial user') {
+            transformed.subscription_plan = 'Trial';
+            transformed.is_trial_active = true;
+            transformed.is_subscription_active = false;
+            // Only set status to Active if not already set by status field
+            if (!transformed.status) {
+              transformed.status = 'Active';
+            }
+          } else if (plan.includes('paid') || plan.includes('basic') || plan.includes('advanced') || plan.includes('premium')) {
+            transformed.subscription_plan = 'Paid';
+            transformed.is_trial_active = false;
+            transformed.is_subscription_active = true;
+            // Only set status to Active if not already set by status field
+            if (!transformed.status) {
+              transformed.status = 'Active';
+            }
+          } else if (plan.includes('unpaid') || plan === '' || plan === 'null' || plan === 'none') {
+            transformed.subscription_plan = 'Unpaid';
+            transformed.is_trial_active = false;
+            transformed.is_subscription_active = false;
+            // Only set status to Inactive if not already set by status field
+            if (!transformed.status) {
+              transformed.status = 'Inactive';
+            }
+          } else {
+            // Default to Trial for unknown values
+            console.warn(`Unknown subscription plan "${transformed.subscription_plan}" in row ${index + 1}, defaulting to "Trial"`);
+            transformed.subscription_plan = 'Trial';
+            transformed.is_trial_active = true;
+            transformed.is_subscription_active = false;
+            // Only set status to Active if not already set by status field
+            if (!transformed.status) {
+              transformed.status = 'Active';
+            }
+          }
+        } else {
+          // No subscription plan specified, default to Trial
+          transformed.subscription_plan = 'Trial';
+          transformed.is_trial_active = true;
+          transformed.is_subscription_active = false;
+          // Only set status to Active if not already set by status field
+          if (!transformed.status) {
+            transformed.status = 'Active';
+          }
+        }
+
+        return transformed;
+      } catch (rowError) {
+        console.error(`Error processing row ${index + 1}:`, rowError, row);
+        // Return a minimal valid object to prevent complete failure
+        return {
+          name: row[Object.keys(fieldMapping).find(h => fieldMapping[h] === 'first_name') || ''] || 
+                row[Object.keys(fieldMapping).find(h => fieldMapping[h] === 'last_name') || ''] || 
+                `Row ${index + 1}`,
+          status: 'Active',
+          is_trial_active: true,
+          is_subscription_active: false,
+          amount_paid: 0
+        };
       }
-
-      // Set default values
-      if (!transformed.name && (transformed.first_name || transformed.last_name)) {
-        transformed.name = `${transformed.first_name || ''} ${transformed.last_name || ''}`.trim();
-      }
-
-      return transformed;
     });
   };
 
@@ -222,31 +399,55 @@ const CSVImport: React.FC<CSVImportProps> = ({ isOpen, onClose }) => {
       const transformedData = transformData();
       
       // Validate transformed data
-      const validData = transformedData.filter(lead => {
+      const validData = transformedData.filter((lead, index) => {
         // At minimum, we need a name or first_name/last_name
-        return lead.name || lead.first_name || lead.last_name;
+        const isValid = lead.name || lead.first_name || lead.last_name;
+        if (!isValid) {
+          console.warn(`Row ${index + 1} is missing required name fields:`, lead);
+        }
+        return isValid;
       });
 
       if (validData.length === 0) {
-        setUploadStatus({ type: 'error', message: 'No valid leads found. Please ensure you have mapped name fields.' });
+        setUploadStatus({ type: 'error', message: 'No valid leads found. Please ensure you have mapped name fields and that your CSV data is properly formatted.' });
         return;
       }
 
       if (validData.length !== transformedData.length) {
-        setUploadStatus({ type: 'info', message: `Found ${validData.length} valid leads out of ${transformedData.length} total rows. Proceeding with import...` });
+        const invalidCount = transformedData.length - validData.length;
+        setUploadStatus({ 
+          type: 'info', 
+          message: `Found ${validData.length} valid leads out of ${transformedData.length} total rows. ${invalidCount} rows were skipped due to missing required fields. Proceeding with import...` 
+        });
       }
 
       const result = await addLeadsBulk(validData);
 
       if (result.error) {
-        setUploadStatus({ type: 'error', message: `Import failed: ${result.error.message || result.error}` });
+        const details = result.data;
+        const message = details ? 
+          `Import completed with results. Added: ${details.added}, Updated: ${details.updated}` :
+          `Import failed: ${result.error}`;
+        
+        setUploadStatus({ 
+          type: 'error', 
+          message: details ? `${message} (${details.errors.length} errors)` : result.error,
+          details
+        });
       } else {
-        setUploadStatus({ type: 'success', message: `Successfully imported ${validData.length} leads!` });
+        const details = result.data;
+        const message = `Import completed successfully! Added: ${details.added}, Updated: ${details.updated}`;
+        
+        setUploadStatus({ 
+          type: 'success', 
+          message,
+          details
+        });
         // Reset form after successful import
         setTimeout(() => {
           resetForm();
           onClose();
-        }, 2000);
+        }, 3000);
       }
     } catch (error) {
       setUploadStatus({ type: 'error', message: `Import failed: ${error}` });
@@ -320,9 +521,16 @@ const CSVImport: React.FC<CSVImportProps> = ({ isOpen, onClose }) => {
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• Download the template to see the expected format</li>
               <li>• At minimum, include First Name or Last Name for each lead</li>
+              <li>• <strong>Duplicate Detection:</strong> Existing contacts with matching email or phone will be updated</li>
+              <li>• <strong>New Contacts:</strong> Contacts not found will be added as new leads</li>
               <li>• Tags should be separated by semicolons (e.g., "legal;court-reporting")</li>
-              <li>• Dates should be in YYYY-MM-DD format</li>
+              <li>• Dates should be in YYYY-MM-DD format (e.g., 2025-01-15)</li>
               <li>• Amount Paid should be a number (e.g., 500 for ₹500)</li>
+              <li>• Trial/Subscription Active fields: use "true"/"false", "yes"/"no", or "1"/"0"</li>
+              <li>• Status options: "Active" or "Inactive"</li>
+              <li>• Subscription Plan options: "Trial", "Paid", "Unpaid"</li>
+              <li>• <strong>Auto Trial Management:</strong> Trial end date automatically calculated as 15 days from trial start date</li>
+              <li>• <strong>Auto Status Updates:</strong> Expired trials automatically change to "Unpaid" and "Inactive" status</li>
               <li>• Maximum file size: 10MB</li>
             </ul>
           </div>
@@ -389,19 +597,60 @@ const CSVImport: React.FC<CSVImportProps> = ({ isOpen, onClose }) => {
 
         {/* Status Message */}
         {uploadStatus.type && (
-          <div className={`mb-4 p-4 rounded-lg flex items-center space-x-2 ${
+          <div className={`mb-4 p-4 rounded-lg ${
             uploadStatus.type === 'success' ? 'bg-green-100 text-green-800' :
             uploadStatus.type === 'error' ? 'bg-red-100 text-red-800' :
             'bg-blue-100 text-blue-800'
           }`}>
-            {uploadStatus.type === 'success' ? (
-              <CheckCircle className="w-5 h-5" />
-            ) : uploadStatus.type === 'error' ? (
-              <AlertCircle className="w-5 h-5" />
-            ) : (
-              <FileText className="w-5 h-5" />
+            <div className="flex items-center space-x-2 mb-2">
+              {uploadStatus.type === 'success' ? (
+                <CheckCircle className="w-5 h-5" />
+              ) : uploadStatus.type === 'error' ? (
+                <AlertCircle className="w-5 h-5" />
+              ) : (
+                <FileText className="w-5 h-5" />
+              )}
+              <span className="font-medium">{uploadStatus.message}</span>
+            </div>
+            
+            {/* Detailed Results */}
+            {uploadStatus.details && (
+              <div className="mt-3 pt-3 border-t border-current border-opacity-20">
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="font-bold text-green-600">{uploadStatus.details.added}</div>
+                    <div>Added</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold text-blue-600">{uploadStatus.details.updated}</div>
+                    <div>Updated</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold text-gray-600">{uploadStatus.details.skipped}</div>
+                    <div>Skipped</div>
+                  </div>
+                </div>
+                
+                {/* Error Details */}
+                {uploadStatus.details.errors.length > 0 && (
+                  <div className="mt-3">
+                    <div className="font-medium mb-2">Errors ({uploadStatus.details.errors.length}):</div>
+                    <div className="max-h-32 overflow-y-auto text-xs space-y-1">
+                      {uploadStatus.details.errors.slice(0, 5).map((error, index) => (
+                        <div key={index} className="bg-red-50 p-2 rounded">
+                          {error}
+                        </div>
+                      ))}
+                      {uploadStatus.details.errors.length > 5 && (
+                        <div className="text-center text-gray-600">
+                          ... and {uploadStatus.details.errors.length - 5} more errors
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-            <span>{uploadStatus.message}</span>
           </div>
         )}
 

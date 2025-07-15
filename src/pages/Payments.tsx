@@ -30,163 +30,9 @@ const Payments = () => {
   const [showInvoicePreview, setShowInvoicePreview] = useState<Invoice | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
-  // Mock payment data
-  const [payments] = useState<Payment[]>([
-    {
-      id: '1',
-      userId: '1',
-      userName: 'Rajesh Kumar',
-      userEmail: 'rajesh.kumar@lawfirm.in',
-      plan: 'basic',
-      amount: 197,
-      currency: 'INR',
-      status: 'paid',
-      paymentMethod: 'upi',
-      transactionId: 'TXN123456789',
-      invoiceNumber: 'INV-2024-001',
-      paymentDate: new Date('2024-01-15'),
-      nextBillingDate: new Date('2024-02-15'),
-      subscriptionStatus: 'active',
-      planStartDate: new Date('2024-01-15'),
-      planEndDate: new Date('2024-02-15'),
-      autoRenewal: true,
-      remindersSent: 0
-    },
-    {
-      id: '2',
-      userId: '2',
-      userName: 'Priya Sharma',
-      userEmail: 'priya.sharma@newstoday.com',
-      plan: 'advanced',
-      amount: 497,
-      currency: 'INR',
-      status: 'paid',
-      paymentMethod: 'card',
-      transactionId: 'TXN987654321',
-      invoiceNumber: 'INV-2024-002',
-      paymentDate: new Date('2024-01-20'),
-      nextBillingDate: new Date('2024-04-20'),
-      subscriptionStatus: 'active',
-      planStartDate: new Date('2024-01-20'),
-      planEndDate: new Date('2024-04-20'),
-      autoRenewal: true,
-      remindersSent: 0
-    },
-    {
-      id: '3',
-      userId: '3',
-      userName: 'Amit Patel',
-      userEmail: 'amit.patel@freelance.com',
-      plan: 'basic',
-      amount: 197,
-      currency: 'INR',
-      status: 'pending',
-      paymentMethod: 'netbanking',
-      transactionId: 'TXN456789123',
-      invoiceNumber: 'INV-2024-003',
-      paymentDate: new Date('2024-01-25'),
-      dueDate: new Date('2024-01-30'),
-      nextBillingDate: new Date('2024-02-25'),
-      subscriptionStatus: 'trial',
-      trialEndDate: new Date('2024-02-01'),
-      planStartDate: new Date('2024-01-25'),
-      planEndDate: new Date('2024-02-25'),
-      autoRenewal: false,
-      remindersSent: 2,
-      lastReminderDate: new Date('2024-01-28')
-    },
-    {
-      id: '4',
-      userId: '4',
-      userName: 'Dr. Sunita Verma',
-      userEmail: 'sunita.verma@university.edu',
-      plan: 'advanced',
-      amount: 497,
-      currency: 'INR',
-      status: 'failed',
-      paymentMethod: 'card',
-      transactionId: 'TXN789123456',
-      invoiceNumber: 'INV-2024-004',
-      paymentDate: new Date('2024-01-22'),
-      dueDate: new Date('2024-01-27'),
-      subscriptionStatus: 'expired',
-      planStartDate: new Date('2024-01-22'),
-      planEndDate: new Date('2024-01-22'),
-      autoRenewal: true,
-      remindersSent: 3,
-      lastReminderDate: new Date('2024-01-26')
-    },
-    {
-      id: '5',
-      userId: '7',
-      userName: 'Arjun Reddy',
-      userEmail: 'arjun.reddy@student.ac.in',
-      plan: 'basic',
-      amount: 0,
-      currency: 'INR',
-      status: 'pending',
-      paymentMethod: 'upi',
-      transactionId: '',
-      invoiceNumber: '',
-      paymentDate: new Date('2024-01-28'),
-      subscriptionStatus: 'trial',
-      trialEndDate: new Date('2024-02-04'),
-      planStartDate: new Date('2024-01-28'),
-      planEndDate: new Date('2024-02-28'),
-      autoRenewal: false,
-      remindersSent: 0
-    }
-  ]);
-
-  // Mock invoice data
-  const [invoices] = useState<Invoice[]>([
-    {
-      id: '1',
-      invoiceNumber: 'INV-2024-001',
-      userId: '1',
-      userName: 'Rajesh Kumar',
-      userEmail: 'rajesh.kumar@lawfirm.in',
-      plan: 'basic',
-      amount: 197,
-      tax: 35.46,
-      total: 232.46,
-      currency: 'INR',
-      issueDate: new Date('2024-01-15'),
-      dueDate: new Date('2024-01-22'),
-      status: 'paid',
-      items: [
-        {
-          description: 'Rapid Steno Basic Plan - Monthly Subscription',
-          quantity: 1,
-          rate: 197,
-          amount: 197
-        }
-      ]
-    },
-    {
-      id: '2',
-      invoiceNumber: 'INV-2024-002',
-      userId: '2',
-      userName: 'Priya Sharma',
-      userEmail: 'priya.sharma@newstoday.com',
-      plan: 'advanced',
-      amount: 497,
-      tax: 89.46,
-      total: 586.46,
-      currency: 'INR',
-      issueDate: new Date('2024-01-20'),
-      dueDate: new Date('2024-01-27'),
-      status: 'paid',
-      items: [
-        {
-          description: 'Rapid Steno Advanced Plan - Quarterly Subscription',
-          quantity: 1,
-          rate: 497,
-          amount: 497
-        }
-      ]
-    }
-  ]);
+  // Empty arrays for real data
+  const [payments] = useState<Payment[]>([]);
+  const [invoices] = useState<Invoice[]>([]);
 
   const [newInvoice, setNewInvoice] = useState({
     userId: '',
@@ -500,7 +346,18 @@ const Payments = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPayments.map((payment) => (
+              {filteredPayments.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center space-y-3">
+                      <CreditCard className="w-12 h-12 text-gray-400" />
+                      <h3 className="text-lg font-medium text-gray-900">No payments found</h3>
+                      <p className="text-gray-500">When you have payment data, it will appear here.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredPayments.map((payment) => (
                 <tr key={payment.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
@@ -558,7 +415,8 @@ const Payments = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>
@@ -594,49 +452,61 @@ const Payments = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {invoices.map((invoice) => (
-                <tr key={invoice.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {invoice.invoiceNumber}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{invoice.userName}</div>
-                      <div className="text-sm text-gray-500">{invoice.userEmail}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                    {invoice.plan}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ₹{invoice.total.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
-                      {invoice.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {invoice.dueDate.toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button 
-                        onClick={() => setShowInvoicePreview(invoice)}
-                        className="text-primary hover:text-primary-hover"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="text-gray-600 hover:text-gray-900">
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button className="text-blue-600 hover:text-blue-900">
-                        <Send className="w-4 h-4" />
-                      </button>
+              {invoices.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center space-y-3">
+                      <FileText className="w-12 h-12 text-gray-400" />
+                      <h3 className="text-lg font-medium text-gray-900">No invoices found</h3>
+                      <p className="text-gray-500">When you create invoices, they will appear here.</p>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                invoices.map((invoice) => (
+                  <tr key={invoice.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {invoice.invoiceNumber}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{invoice.userName}</div>
+                        <div className="text-sm text-gray-500">{invoice.userEmail}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                      {invoice.plan}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₹{invoice.total.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                        {invoice.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {invoice.dueDate.toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => setShowInvoicePreview(invoice)}
+                          className="text-primary hover:text-primary-hover"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button className="text-gray-600 hover:text-gray-900">
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button className="text-blue-600 hover:text-blue-900">
+                          <Send className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

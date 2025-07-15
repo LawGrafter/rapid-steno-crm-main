@@ -108,7 +108,7 @@ serve(async (req) => {
         company: registrationData.company || existingLead.company,
         source: registrationData.source || existingLead.source || 'Software Registration',
         status: registrationData.status || existingLead.status || 'New',
-        plan: registrationData.plan || existingLead.plan,
+        plan: registrationData.plan || existingLead.plan || 'Trial User',
         referral_code: registrationData.referral_code || existingLead.referral_code,
         user_type: registrationData.user_type || existingLead.user_type || 'Trial User',
         subscription_plan: registrationData.subscription_plan || existingLead.subscription_plan,
@@ -164,66 +164,66 @@ serve(async (req) => {
         userId = Deno.env.get('ADMIN_USER_ID');
       }
       // Create new lead
-      const leadData = {
-        name: registrationData.name || `${registrationData.first_name || ''} ${registrationData.last_name || ''}`.trim(),
-        email: registrationData.email,
-        phone: registrationData.phone,
-        first_name: registrationData.first_name,
-        last_name: registrationData.last_name,
-        company: registrationData.company,
-        state: registrationData.state,
-        gender: registrationData.gender,
-        exam_category: registrationData.exam_category,
-        how_did_you_hear: registrationData.how_did_you_hear,
+    const leadData = {
+      name: registrationData.name || `${registrationData.first_name || ''} ${registrationData.last_name || ''}`.trim(),
+      email: registrationData.email,
+      phone: registrationData.phone,
+      first_name: registrationData.first_name,
+      last_name: registrationData.last_name,
+      company: registrationData.company,
+      state: registrationData.state,
+      gender: registrationData.gender,
+      exam_category: registrationData.exam_category,
+      how_did_you_hear: registrationData.how_did_you_hear,
         source: registrationData.source || 'Software Registration',
         status: registrationData.status || 'New',
-        user_type: registrationData.user_type || 'Trial User',
-        subscription_plan: registrationData.subscription_plan || 'Trial User',
-        plan: registrationData.plan,
-        referral_code: registrationData.referral_code,
-        tags: registrationData.tags,
-        value: registrationData.value,
+      user_type: registrationData.user_type || 'Trial User',
+      subscription_plan: registrationData.subscription_plan || 'Trial User',
+      plan: registrationData.plan || 'Trial User',
+      referral_code: registrationData.referral_code,
+      tags: registrationData.tags,
+      value: registrationData.value,
         notes: registrationData.notes ? `[Software Registration] ${registrationData.notes}` : 'Lead created from software registration',
-        trial_start_date: registrationData.trial_start_date || new Date().toISOString(),
-        trial_end_date: registrationData.trial_end_date || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-        is_trial_active: registrationData.is_trial_active !== undefined ? registrationData.is_trial_active : true,
-        is_subscription_active: registrationData.is_subscription_active || false,
-        amount_paid: registrationData.amount_paid || 0,
-        subscription_start_date: registrationData.subscription_start_date,
-        subscription_end_date: registrationData.subscription_end_date,
-        next_payment_date: registrationData.next_payment_date,
+      trial_start_date: registrationData.trial_start_date || new Date().toISOString(),
+      trial_end_date: registrationData.trial_end_date || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+      is_trial_active: registrationData.is_trial_active !== undefined ? registrationData.is_trial_active : true,
+      is_subscription_active: registrationData.is_subscription_active || false,
+      amount_paid: registrationData.amount_paid || 0,
+      subscription_start_date: registrationData.subscription_start_date,
+      subscription_end_date: registrationData.subscription_end_date,
+      next_payment_date: registrationData.next_payment_date,
         user_id: userId // Link to Supabase Auth user
-      }
+    }
 
       const { data: newLead, error } = await supabaseClient
-        .from('leads')
-        .insert(leadData)
-        .select()
+      .from('leads')
+      .insert(leadData)
+      .select()
         .single()
 
-      if (error) {
-        throw error
-      }
+    if (error) {
+      throw error
+    }
 
       console.log('Created new lead:', newLead.id)
 
       // Initialize user activity record if we have activity data
-      if (registrationData.activityData) {
+    if (registrationData.activityData) {
         await updateUserActivity(supabaseClient, newLead.id, registrationData.activityData)
-      }
+    }
 
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
           message: 'Lead created successfully',
           lead_id: newLead.id,
           action: 'created'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
         }
-      )
+    )
     }
   } catch (error) {
     console.error('Error syncing registration:', error)
@@ -251,7 +251,7 @@ async function updateUserActivity(supabaseClient: any, leadId: string, activityD
       total_time_spent: activityData.total_time_spent || 0,
       last_active: activityData.last_active || new Date().toISOString(),
       updated_at: new Date().toISOString()
-    }
+  }
 
     // Upsert activity data
     await supabaseClient

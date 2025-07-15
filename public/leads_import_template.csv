@@ -1,6 +1,6 @@
-First Name,Last Name,Email,Phone,State,Gender,Exam Category,How did you hear about us?,Status,Plan,Referral Code,Notes,Tags,Amount Paid,Subscription Plan
-John,Doe,john.doe@example.com,+91-9876543210,Maharashtra,Male,Court Exams,Google,New,Trial User,REF001,Interested in court reporting,legal;court-reporting,0,Trial User
-Jane,Smith,jane.smith@example.com,+91-9876543211,Karnataka,Female,SSC & other exams,Facebook,Contacted,Basic Monthly,REF002,Follow up needed,ssc;advanced,500,Basic Monthly
-Mike,Johnson,mike.j@example.com,+91-9876543212,Delhi,Male,Court Exams,Telegram,Qualified,Advanced Quarterly,REF003,High potential lead,legal;premium,1500,Advanced Quarterly
-Sarah,Williams,sarah.w@example.com,+91-9876543213,Tamil Nadu,Female,SSC & other exams,Instagram,New,Trial User,REF004,New inquiry,ssc;urgent,0,Trial User
-David,Brown,david.b@example.com,+91-9876543214,Gujarat,Male,Court Exams,YouTube,Contacted,Basic Monthly,REF005,Interested in premium features,legal;premium,500,Basic Monthly 
+First Name,Last Name,Email,Phone,IP Address,State,Gender,Exam Category,How did you hear about us?,Status,Plan,Referral Code,Notes,Tags,Amount Paid,Subscription Plan,Trial Start Date,Trial End Date,Trial Active,Subscription Start Date,Subscription End Date,Subscription Active,Next Payment Date
+John,Doe,john.doe@example.com,+91-9876543210,192.168.1.100,Maharashtra,Male,Court Exams,Google,Active,Trial User,REF001,Interested in court reporting,legal;court-reporting,0,Trial,2025-01-01,2025-01-16,true,,,false,
+Jane,Smith,jane.smith@example.com,+91-9876543211,203.45.67.89,Karnataka,Female,SSC & other exams,Facebook,Active,Basic Monthly,REF002,Follow up needed,ssc;advanced,500,Paid,2025-01-01,2025-01-16,false,2025-01-16,2025-04-16,true,2025-04-16
+Mike,Johnson,mike.j@example.com,+91-9876543212,172.16.0.50,Delhi,Male,Court Exams,Telegram,Active,Advanced Quarterly,REF003,High potential lead,legal;premium,1500,Paid,2025-01-01,2025-01-16,false,2025-01-16,2025-04-16,true,2025-04-16
+Sarah,Williams,sarah.w@example.com,+91-9876543213,10.0.0.25,Tamil Nadu,Female,SSC & other exams,Instagram,Inactive,Trial User,REF004,New inquiry,ssc;urgent,0,Unpaid,2025-01-01,2025-01-16,false,,,false,
+David,Brown,david.b@example.com,+91-9876543214,198.51.100.75,Gujarat,Male,Court Exams,YouTube,Inactive,Basic Monthly,REF005,Interested in premium features,legal;premium,500,Paid,2025-01-01,2025-01-16,false,2025-01-16,2025-02-16,true,2025-02-16 

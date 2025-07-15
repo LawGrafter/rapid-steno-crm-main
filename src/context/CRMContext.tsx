@@ -261,48 +261,78 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) return { error: 'User not authenticated' };
 
     try {
-      // For large datasets, use the Edge Function
-      if (leadsData.length > 50) {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-import-leads`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            leads: leadsData,
-            userId: user.id
-          })
-        });
+      const results = {
+        added: 0,
+        updated: 0,
+        skipped: 0,
+        errors: [] as string[]
+      };
 
-        const result = await response.json();
-        
-        if (result.success) {
-          // Refresh data to get the new leads
-          await refreshData();
-          return { data: result, error: null };
-        } else {
-          return { error: result.error || 'Bulk import failed' };
+      // Process each lead individually to handle duplicates
+      for (const leadData of leadsData) {
+        try {
+          // Check for existing lead by email or phone
+          let existingLead = null;
+          
+          if (leadData.email) {
+            const { data: emailMatch } = await supabase
+              .from('leads')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('email', leadData.email)
+              .single();
+            existingLead = emailMatch;
+          }
+          
+          if (!existingLead && leadData.phone) {
+            const { data: phoneMatch } = await supabase
+              .from('leads')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('phone', leadData.phone)
+              .single();
+            existingLead = phoneMatch;
+          }
+
+          if (existingLead) {
+            // Update existing lead
+            const { error: updateError } = await supabase
+              .from('leads')
+              .update({
+                ...leadData,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingLead.id);
+
+            if (updateError) {
+              results.errors.push(`Failed to update ${leadData.email || leadData.phone}: ${updateError.message}`);
+            } else {
+              results.updated++;
+            }
+          } else {
+            // Add new lead
+            const { error: insertError } = await supabase
+              .from('leads')
+              .insert([{ ...leadData, user_id: user.id }]);
+
+            if (insertError) {
+              results.errors.push(`Failed to add ${leadData.email || leadData.phone}: ${insertError.message}`);
+            } else {
+              results.added++;
+            }
+          }
+        } catch (error) {
+          results.errors.push(`Error processing lead: ${error}`);
         }
-      } else {
-        // For smaller datasets, use direct Supabase insert
-        const { data, error } = await supabase
-          .from('leads')
-          .insert(leadsData.map(lead => ({ ...lead, user_id: user.id })))
-          .select();
-
-        if (error) {
-          console.error('Error adding leads in bulk:', error);
-          return { error };
-        }
-
-        if (data) {
-          setLeads(prev => [...data, ...prev]);
-          return { data, error: null };
-        }
-
-        return { error: 'No data returned' };
       }
+
+      // Refresh data to get updated leads
+      await refreshData();
+
+      return { 
+        data: results, 
+        error: results.errors.length > 0 ? results.errors.join('; ') : null 
+      };
     } catch (error) {
       console.error('Error in bulk import:', error);
       return { error };

@@ -93,7 +93,7 @@ export async function handler(event, context) {
       name: fullName,
       phone,
       source: 'Software Registration',
-      status: 'New',
+              status: 'Active',
       user_type: 'Trial User',
       plan: 'Trial User',
       is_trial_active: true,
