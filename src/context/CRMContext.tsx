@@ -197,11 +197,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) return;
 
     try {
-      // Load leads - temporarily showing all leads for debugging
+      // Load leads - filter by current user's ID
       const { data: leadsData } = await supabase
         .from('leads')
         .select('*')
-        // .eq('user_id', user.id) // Temporarily disabled for debugging
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (leadsData) setLeads(leadsData);

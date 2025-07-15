@@ -13,6 +13,7 @@ interface RegistrationData {
   last_name?: string;
   name?: string;
   phone?: string;
+  user_id?: string; // Add user_id field
   state?: string;
   gender?: string;
   exam_category?: string;
@@ -80,7 +81,6 @@ serve(async (req) => {
     )
 
     console.log('Received registration data for:', registrationData.email)
-    console.log('Full registration data:', JSON.stringify(registrationData, null, 2))
 
     // Validate required fields
     if (!registrationData.email) {
@@ -157,32 +157,11 @@ serve(async (req) => {
         }
       )
     } else {
-      // Ensure Supabase Auth user exists for this email
-      let userId = null;
-      // Query auth.users via REST API
-      const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-      const ANON_KEY = Deno.env.get('MY_SUPABASE_ANON_KEY');
-      console.log('ANON_KEY:', ANON_KEY); // Debug log
-      const userResp = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(registrationData.email)}`, {
-        headers: {
-          apikey: ANON_KEY,
-          Authorization: `Bearer ${ANON_KEY}`,
-        },
-      });
-      const users = await userResp.json();
-      if (users.length) {
-        userId = users[0].id;
-      } else {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: 'Supabase Auth user does not exist for this email. Please create the Auth user first.'
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
+      // Use the user_id from the registration data (sent by Netlify function)
+      let userId = registrationData.user_id;
+      
+      if (!userId) {
+        userId = Deno.env.get('ADMIN_USER_ID');
       }
       // Create new lead
       const leadData = {
