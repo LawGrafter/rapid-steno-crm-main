@@ -10,24 +10,25 @@ import {
   Settings,
   Zap,
   List,
-  Activity
+  Activity,
+  Lock
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const location = useLocation();
 
   const navItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/leads', icon: Users, label: 'Leads' },
-    { path: '/user-activity', icon: Activity, label: 'User Activity' },
-    { path: '/lists', icon: List, label: 'Lists' },
-    { path: '/campaigns', icon: Mail, label: 'Campaigns' },
-    { path: '/workflows', icon: Zap, label: 'Workflows' },
-    { path: '/templates', icon: PenTool, label: 'Templates' },
-    { path: '/analytics', icon: BarChart3, label: 'Analytics' },
-    { path: '/payments', icon: CreditCard, label: 'Payments' },
-    { path: '/domains', icon: Globe, label: 'Domains' },
-    { path: '/settings', icon: Settings, label: 'Settings' }
+    { path: '/', icon: LayoutDashboard, label: 'Dashboard', locked: false },
+    { path: '/leads', icon: Users, label: 'Leads', locked: false },
+    { path: '/user-activity', icon: Activity, label: 'User Activity', locked: true },
+    { path: '/lists', icon: List, label: 'Lists', locked: true },
+    { path: '/campaigns', icon: Mail, label: 'Campaigns', locked: true },
+    { path: '/workflows', icon: Zap, label: 'Workflows', locked: true },
+    { path: '/templates', icon: PenTool, label: 'Templates', locked: true },
+    { path: '/analytics', icon: BarChart3, label: 'Analytics', locked: true },
+    { path: '/payments', icon: CreditCard, label: 'Payments', locked: true },
+    { path: '/domains', icon: Globe, label: 'Domains', locked: true },
+    { path: '/settings', icon: Settings, label: 'Settings', locked: true }
   ];
 
   return (
@@ -59,6 +60,21 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       <nav className="flex-1 py-6 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
+          
+          if (item.locked) {
+            return (
+              <div
+                key={item.path}
+                className="flex items-center space-x-3 px-6 py-3 text-sm font-medium text-gray-500 cursor-not-allowed opacity-60"
+                title="This feature is locked"
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="flex-1">{item.label}</span>
+                <Lock className="w-4 h-4 text-gray-400" />
+              </div>
+            );
+          }
+
           return (
             <NavLink
               key={item.path}
