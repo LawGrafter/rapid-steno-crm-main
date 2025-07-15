@@ -17,8 +17,10 @@ const TestIntegration = () => {
 
     // Test 1: Basic Registration
     addResult('1️⃣ Testing basic registration...');
+    // Use a unique email for each test run
+    const uniqueEmail = `test.user.${Date.now()}@example.com`;
     const registrationData: RegistrationData = {
-      email: `test.user.${Date.now()}@example.com`,
+      email: uniqueEmail,
       first_name: 'Test',
       last_name: 'User',
       phone: '+91-9876543210',
@@ -42,7 +44,12 @@ const TestIntegration = () => {
       const userResp = await fetch('/.netlify/functions/create-supabase-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: registrationData.email, name: registrationData.name || `${registrationData.first_name || ''} ${registrationData.last_name || ''}`.trim() })
+        body: JSON.stringify({ 
+          email: uniqueEmail, 
+          firstName: registrationData.first_name,
+          lastName: registrationData.last_name,
+          phone: registrationData.phone
+        })
       });
       userResult = await userResp.json();
       if (!userResult.user) {
@@ -54,6 +61,37 @@ const TestIntegration = () => {
       }
     } catch (err) {
       addResult(`❌ Error creating Supabase Auth user: ${err}`);
+      setIsRunning(false);
+      return;
+    }
+
+    // Poll for user existence in Supabase Auth (REST API) BEFORE registration
+    let userFound = false;
+    for (let attempt = 1; attempt <= 10; attempt++) {
+      addResult(`Checking for user in Supabase Auth (Attempt ${attempt})...`);
+      try {
+        const resp = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(uniqueEmail)}`,
+          {
+            headers: {
+              apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+          }
+        );
+        const users = await resp.json();
+        if (users.length) {
+          userFound = true;
+          addResult('✅ User found in Supabase Auth. Proceeding to registration.');
+          break;
+        }
+      } catch (err) {
+        addResult(`Error checking user existence: ${err}`);
+      }
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    if (!userFound) {
+      addResult('❌ User not found in Supabase Auth after waiting. Aborting registration test.');
       setIsRunning(false);
       return;
     }
@@ -74,59 +112,30 @@ const TestIntegration = () => {
     // Add a delay to allow user creation to propagate
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Poll for user existence in Supabase Auth (REST API)
-    let userFound = false;
-    for (let attempt = 1; attempt <= 10; attempt++) {
-      addResult(`Checking for user in Supabase Auth (Attempt ${attempt})...`);
+    // Test 2: Activity Update with retry logic
+    let activityResult;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      addResult(`\n2️⃣ Testing activity update... (Attempt ${attempt})`);
       try {
-        const resp = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(registrationData.email)}`,
-          {
-            headers: {
-              apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-          }
-        );
-        const users = await resp.json();
-        if (users.length) {
-          userFound = true;
-          addResult('✅ User found in Supabase Auth. Proceeding to activity update.');
+        activityResult = await crmIntegration.updateActivity({
+          email: uniqueEmail,
+          login_count: 5,
+          subscription_days_left: 12,
+          daily_time_spent: 45,
+          total_time_spent: 180,
+          last_active: new Date().toISOString()
+        });
+        if (activityResult.success) {
+          addResult(`✅ Activity test: PASSED`);
           break;
+        } else {
+          addResult(`❌ Activity test: FAILED - ${activityResult.error}`);
         }
-      } catch (err) {
-        addResult(`Error checking user existence: ${err}`);
+      } catch (error) {
+        addResult(`❌ Activity test: FAILED - ${error}`);
       }
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
-    if (!userFound) {
-      addResult('❌ User not found in Supabase Auth after waiting. Aborting activity test.');
-    } else {
-      // Test 2: Activity Update with retry logic
-      let activityResult;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        addResult(`\n2️⃣ Testing activity update... (Attempt ${attempt})`);
-        try {
-          activityResult = await crmIntegration.updateActivity({
-            email: registrationData.email,
-            login_count: 5,
-            subscription_days_left: 12,
-            daily_time_spent: 45,
-            total_time_spent: 180,
-            last_active: new Date().toISOString()
-          });
-          if (activityResult.success) {
-            addResult(`✅ Activity test: PASSED`);
-            break;
-          } else {
-            addResult(`❌ Activity test: FAILED - ${activityResult.error}`);
-          }
-        } catch (error) {
-          addResult(`❌ Activity test: FAILED - ${error}`);
-        }
-        if (attempt < 3) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
@@ -134,7 +143,7 @@ const TestIntegration = () => {
     addResult('\n3️⃣ Testing lead update...');
     try {
       const result = await crmIntegration.updateLead({
-        email: registrationData.email,
+        email: uniqueEmail,
         status: 'Contacted',
         plan: 'Basic Monthly',
         amount_paid: 500,

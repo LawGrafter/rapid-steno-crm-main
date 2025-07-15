@@ -14,7 +14,11 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const Dashboard = () => {
-  const { leads, campaigns } = useCRM();
+  const { leads, campaigns, user } = useCRM();
+
+  // Temporary debug section - remove this after getting your user ID
+  console.log('Current user ID:', user?.id);
+  console.log('Current user email:', user?.email);
 
   // Mock payment data for dashboard
   const paymentStats = {
@@ -79,6 +83,16 @@ const Dashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Temporary debug section - remove after getting user ID */}
+      {user && (
+        <div className="p-4 bg-yellow-100 border border-yellow-400 rounded-lg">
+          <h3 className="font-bold text-yellow-800 mb-2">🔧 Debug Info (Remove after setup)</h3>
+          <p className="text-sm text-yellow-700">User ID: <code className="bg-yellow-200 px-2 py-1 rounded">{user.id}</code></p>
+          <p className="text-sm text-yellow-700">Email: <code className="bg-yellow-200 px-2 py-1 rounded">{user.email}</code></p>
+          <p className="text-xs text-yellow-600 mt-2">Copy the User ID and set it as ADMIN_USER_ID in your Netlify environment variables.</p>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>

@@ -197,34 +197,38 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) return;
 
     try {
-      // Load leads
+      // Load leads - filter by current user's ID (temporarily showing all leads for testing)
       const { data: leadsData } = await supabase
         .from('leads')
         .select('*')
+        // .eq('user_id', user.id) // Temporarily commented out for testing
         .order('created_at', { ascending: false });
       
       if (leadsData) setLeads(leadsData);
 
-      // Load campaigns
+      // Load campaigns - filter by current user's ID
       const { data: campaignsData } = await supabase
         .from('campaigns')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (campaignsData) setCampaigns(campaignsData);
 
-      // Load email lists
+      // Load email lists - filter by current user's ID
       const { data: emailListsData } = await supabase
         .from('email_lists')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (emailListsData) setEmailLists(emailListsData);
 
-      // Load templates
+      // Load templates - filter by current user's ID
       const { data: templatesData } = await supabase
         .from('email_templates')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (templatesData) setTemplates(templatesData);

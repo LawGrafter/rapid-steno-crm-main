@@ -71,14 +71,13 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const registrationData: RegistrationData = await req.json();
   try {
     // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
-
-    const registrationData: RegistrationData = await req.json()
 
     console.log('Received registration data for:', registrationData.email)
 
@@ -161,31 +160,28 @@ serve(async (req) => {
       let userId = null;
       // Query auth.users via REST API
       const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-      const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      const ANON_KEY = Deno.env.get('MY_SUPABASE_ANON_KEY');
+      console.log('ANON_KEY:', ANON_KEY); // Debug log
       const userResp = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(registrationData.email)}`, {
         headers: {
-          apikey: SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+          apikey: ANON_KEY,
+          Authorization: `Bearer ${ANON_KEY}`,
         },
       });
       const users = await userResp.json();
       if (users.length) {
         userId = users[0].id;
       } else {
-        // Create user in Supabase Auth
-        const { data: createdUser, error: createUserError } = await supabaseClient.auth.admin.createUser({
-          email: registrationData.email,
-          password: crypto.randomUUID(), // random password, can be reset later
-          email_confirm: true,
-          user_metadata: {
-            full_name: registrationData.name || `${registrationData.first_name || ''} ${registrationData.last_name || ''}`.trim(),
-            registration_source: registrationData.registration_source || 'software',
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Supabase Auth user does not exist for this email. Please create the Auth user first.'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
           }
-        });
-        if (createUserError || !createdUser?.user?.id) {
-          throw createUserError || new Error('Failed to create Supabase Auth user');
-        }
-        userId = createdUser.user.id;
+        );
       }
       // Create new lead
       const leadData = {
