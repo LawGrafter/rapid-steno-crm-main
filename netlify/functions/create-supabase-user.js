@@ -84,6 +84,8 @@ export async function handler(event, context) {
     // Get the admin user ID (you need to set this in environment variables)
     const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
     
+    console.log('ADMIN_USER_ID:', ADMIN_USER_ID); // Debug log
+    
     const crmData = {
       email,
       first_name: firstName,
@@ -102,6 +104,8 @@ export async function handler(event, context) {
       notes: 'Lead created from software registration',
       user_id: ADMIN_USER_ID // Use admin user ID so leads appear in your CRM
     };
+    
+    console.log('CRM Data being sent:', JSON.stringify(crmData, null, 2)); // Debug log
     
     const crmRes = await fetch('https://jukvyicluadgsbruyqyr.functions.supabase.co/sync-registration', {
       method: 'POST',

@@ -80,6 +80,7 @@ serve(async (req) => {
     )
 
     console.log('Received registration data for:', registrationData.email)
+    console.log('Full registration data:', JSON.stringify(registrationData, null, 2))
 
     // Validate required fields
     if (!registrationData.email) {
