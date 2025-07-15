@@ -21,6 +21,10 @@ const AVAILABLE_TAGS = ['legal', 'court-reporting', 'ssc', 'advanced', 'premium'
 
 const Leads = () => {
   const { leads, addLead, updateLead, deleteLead } = useCRM();
+  
+  // Debug: Log leads data
+  console.log('Leads data:', leads);
+  console.log('Number of leads:', leads.length);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -208,6 +212,23 @@ const Leads = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Debug section - remove after fixing */}
+      <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded-lg">
+        <h3 className="font-bold text-yellow-800 mb-2">🔧 Debug Info (Remove after fixing)</h3>
+        <p className="text-sm text-yellow-700">Number of leads loaded: <code className="bg-yellow-200 px-2 py-1 rounded">{leads.length}</code></p>
+        <p className="text-sm text-yellow-700">Filtered leads: <code className="bg-yellow-200 px-2 py-1 rounded">{filteredLeads.length}</code></p>
+        <p className="text-sm text-yellow-700">Status filter: <code className="bg-yellow-200 px-2 py-1 rounded">{statusFilter}</code></p>
+        <p className="text-sm text-yellow-700">Search term: <code className="bg-yellow-200 px-2 py-1 rounded">{searchTerm}</code></p>
+        {leads.length > 0 && (
+          <div className="mt-2">
+            <p className="text-xs text-yellow-600">First lead:</p>
+            <pre className="text-xs bg-yellow-200 p-2 rounded mt-1 overflow-auto">
+              {JSON.stringify(leads[0], null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+      
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
