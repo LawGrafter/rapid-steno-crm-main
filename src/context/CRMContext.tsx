@@ -197,12 +197,31 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) return;
 
     try {
-      // Load leads - filter by current user's ID
-      const { data: leadsData } = await supabase
+      // Clear existing leads first
+      setLeads([]);
+      
+      // Load leads - show all leads (since software registrations are linked to admin)
+      const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1000); // Add explicit limit to ensure we get all leads
+      
+      console.log('=== LEADS LOADING DEBUG ===');
+      console.log('Timestamp:', new Date().toISOString());
+      console.log('Leads loaded:', leadsData?.length || 0);
+      console.log('Latest leads:', leadsData?.slice(0, 3));
+      console.log('All lead IDs:', leadsData?.map(l => l.id).slice(0, 5));
+      console.log('Latest 5 leads with details:', leadsData?.slice(0, 5).map(l => ({
+        id: l.id,
+        name: l.name,
+        email: l.email,
+        user_id: l.user_id,
+        created_at: l.created_at
+      })));
+      console.log('Error:', leadsError);
+      console.log('Current user ID:', user?.id);
+      console.log('==========================');
       
       if (leadsData) setLeads(leadsData);
 

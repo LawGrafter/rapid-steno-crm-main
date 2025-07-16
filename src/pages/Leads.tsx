@@ -20,8 +20,15 @@ const PLANS = ['Trial User', 'Basic Monthly', 'Advanced Quarterly', 'Paid', 'Unp
 const AVAILABLE_TAGS = ['legal', 'court-reporting', 'ssc', 'advanced', 'premium', 'urgent'];
 
 const Leads = () => {
-  const { leads, addLead, updateLead, deleteLead } = useCRM();
+  const { leads, addLead, updateLead, deleteLead, refreshData, user, isAuthenticated } = useCRM();
   
+  // Debug logging
+  console.log('=== LEADS PAGE DEBUG ===');
+  console.log('User authenticated:', isAuthenticated);
+  console.log('User ID:', user?.id);
+  console.log('Total leads in state:', leads.length);
+  console.log('First 3 leads:', leads.slice(0, 3));
+  console.log('========================');
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
@@ -139,9 +146,26 @@ const Leads = () => {
                          lead.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          lead.last_name?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    return matchesStatus && matchesSubscription && matchesTrialStatus && 
+    const result = matchesStatus && matchesSubscription && matchesTrialStatus && 
            matchesState && matchesExamCategory && matchesSource && 
            matchesDateRange && matchesSearch;
+    
+    // Debug filtering for first few leads
+    if (leads.indexOf(lead) < 3) {
+      console.log(`Lead ${lead.name} (${lead.email}) filtering:`, {
+        matchesStatus,
+        matchesSubscription,
+        matchesTrialStatus,
+        matchesState,
+        matchesExamCategory,
+        matchesSource,
+        matchesDateRange,
+        matchesSearch,
+        result
+      });
+    }
+    
+    return result;
   });
 
   // Calculate statistics
@@ -350,6 +374,34 @@ const Leads = () => {
         </div>
         <div className="flex items-center space-x-3">
           <button 
+            onClick={refreshData}
+            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2"
+          >
+            <Zap className="w-4 h-4" />
+            <span>Refresh</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              console.log('=== ALL LEADS DEBUG ===');
+              leads.forEach((lead, index) => {
+                console.log(`Lead ${index + 1}:`, {
+                  id: lead.id,
+                  name: lead.name,
+                  email: lead.email,
+                  status: lead.status,
+                  subscription_plan: lead.subscription_plan,
+                  created_at: lead.created_at
+                });
+              });
+              console.log('======================');
+            }}
+            className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors flex items-center space-x-2"
+          >
+            <Eye className="w-4 h-4" />
+            <span>Debug All</span>
+          </button>
+          <button 
             onClick={() => setShowCSVImport(true)}
             className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
           >
@@ -363,6 +415,44 @@ const Leads = () => {
             <Plus className="w-4 h-4" />
             <span>Add Lead</span>
           </button>
+        </div>
+      </div>
+
+      {/* Debug Info */}
+      <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h3 className="font-semibold text-yellow-800 mb-2">Debug Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <span className="font-medium">Authentication:</span> {isAuthenticated ? '✅ Authenticated' : '❌ Not Authenticated'}
+          </div>
+          <div>
+            <span className="font-medium">User ID:</span> {user?.id || 'None'}
+          </div>
+          <div>
+            <span className="font-medium">Total Leads:</span> {leads.length}
+          </div>
+        </div>
+        {leads.length > 0 && (
+          <div className="mt-2">
+            <span className="font-medium">Latest Lead:</span> {leads[0]?.name} ({leads[0]?.email})
+          </div>
+        )}
+        <div className="mt-2">
+          <span className="font-medium">Filtered Leads:</span> {filteredLeads.length} of {leads.length}
+        </div>
+        <div className="mt-2 text-xs">
+          <span className="font-medium">Active Filters:</span> 
+          {statusFilter !== 'all' && ` Status:${statusFilter}`}
+          {subscriptionFilter !== 'all' && ` Plan:${subscriptionFilter}`}
+          {trialStatusFilter !== 'all' && ` Trial:${trialStatusFilter}`}
+          {stateFilter !== 'all' && ` State:${stateFilter}`}
+          {examCategoryFilter !== 'all' && ` Category:${examCategoryFilter}`}
+          {sourceFilter !== 'all' && ` Source:${sourceFilter}`}
+          {dateRangeFilter !== 'all' && ` Date:${dateRangeFilter}`}
+          {searchTerm && ` Search:"${searchTerm}"`}
+          {statusFilter === 'all' && subscriptionFilter === 'all' && trialStatusFilter === 'all' && 
+           stateFilter === 'all' && examCategoryFilter === 'all' && sourceFilter === 'all' && 
+           dateRangeFilter === 'all' && !searchTerm && ' None'}
         </div>
       </div>
 
@@ -624,8 +714,32 @@ const Leads = () => {
       </div>
 
       {/* Leads Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredLeads.map(lead => (
+      {filteredLeads.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="bg-gray-50 rounded-lg p-8 border-2 border-dashed border-gray-300">
+            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+              {leads.length === 0 ? 'No leads found' : 'No leads match your filters'}
+            </h3>
+            <p className="text-gray-500 mb-4">
+              {leads.length === 0 
+                ? 'There are no leads in the system yet. Add your first lead to get started!' 
+                : 'Try adjusting your filters to see more results.'
+              }
+            </p>
+            {leads.length === 0 && (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Add Your First Lead
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredLeads.map(lead => (
           <div key={lead.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group">
             {/* Header with gradient */}
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 text-white">
@@ -774,7 +888,8 @@ const Leads = () => {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Add Lead Modal */}
       {showAddForm && (
