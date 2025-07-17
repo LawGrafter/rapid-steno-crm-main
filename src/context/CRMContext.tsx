@@ -200,10 +200,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Clear existing leads first
       setLeads([]);
       
-      // Load leads - show all leads (since software registrations are linked to admin)
+      // Load leads - filter by created_by to show only leads created by this CRM user
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select('*')
+        .eq('created_by', user.id)
         .order('created_at', { ascending: false })
         .limit(1000); // Add explicit limit to ensure we get all leads
       
@@ -221,6 +222,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })));
       console.log('Error:', leadsError);
       console.log('Current user ID:', user?.id);
+      console.log('User ID ready:', !!user?.id);
       console.log('==========================');
       
       if (leadsData) setLeads(leadsData);
@@ -262,7 +264,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const { data, error } = await supabase
       .from('leads')
-      .insert([{ ...leadData, user_id: user.id }])
+      .insert([{ ...leadData, user_id: user.id, created_by: user.id }])
       .select()
       .single();
 
@@ -332,7 +334,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             // Add new lead
             const { error: insertError } = await supabase
               .from('leads')
-              .insert([{ ...leadData, user_id: user.id }]);
+              .insert([{ ...leadData, user_id: user.id, created_by: user.id }]);
 
             if (insertError) {
               results.errors.push(`Failed to add ${leadData.email || leadData.phone}: ${insertError.message}`);

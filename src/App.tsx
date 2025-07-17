@@ -55,17 +55,15 @@ function App() {
           } />
           <Route path="/user-activity" element={
             <ProtectedRoute>
-              <LockedRoute featureName="User Activity">
-                <div className="min-h-screen bg-gray-50 font-lexend">
-                  <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-                  <div className="lg:ml-64 flex flex-col min-h-screen">
-                    <Header onMenuClick={() => setSidebarOpen(true)} />
-                    <main className="flex-1 overflow-auto">
-                      <UserActivity />
-                    </main>
-                  </div>
+              <div className="min-h-screen bg-gray-50 font-lexend">
+                <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+                <div className="lg:ml-64 flex flex-col min-h-screen">
+                  <Header onMenuClick={() => setSidebarOpen(true)} />
+                  <main className="flex-1 overflow-auto">
+                    <UserActivity />
+                  </main>
                 </div>
-              </LockedRoute>
+              </div>
             </ProtectedRoute>
           } />
           <Route path="/lists" element={

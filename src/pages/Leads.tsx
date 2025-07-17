@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Users, Plus, Search, Eye, Edit, Trash2, X, DollarSign, Upload, Calendar, Tag, User, Phone, Mail, MapPin, CreditCard, Clock, AlertCircle, CheckCircle, XCircle, Shield, GraduationCap, FileText, Star, Zap, TrendingUp, Activity, Award, Target, Briefcase, Globe, Smartphone, UserCheck, CalendarDays, Timer, Crown, Gift, Rocket } from 'lucide-react';
 import { useCRM } from '../context/CRMContext';
 import { Lead } from '../types';
@@ -22,11 +22,15 @@ const AVAILABLE_TAGS = ['legal', 'court-reporting', 'ssc', 'advanced', 'premium'
 const Leads = () => {
   const { leads, addLead, updateLead, deleteLead, refreshData, user, isAuthenticated } = useCRM();
   
+  // Extract user ID for filtering
+  const userId = user?.id;
+  
   // Debug logging
   console.log('=== LEADS PAGE DEBUG ===');
   console.log('User authenticated:', isAuthenticated);
-  console.log('User ID:', user?.id);
-  console.log('Total leads in state:', leads.length);
+  console.log('User ID:', userId);
+  console.log('User ID ready:', !!userId);
+  console.log('Total leads:', leads.length);
   console.log('First 3 leads:', leads.slice(0, 3));
   console.log('========================');
 
@@ -92,7 +96,13 @@ const Leads = () => {
     setShowAddForm(false);
   };
 
-  const filteredLeads = leads.filter(lead => {
+  // Filter leads by created_by first, then apply other filters
+  const userLeads = useMemo(() => {
+    if (!leads || !userId) return [];
+    return leads.filter((lead) => lead.created_by === userId);
+  }, [leads, userId]);
+    
+  const filteredLeads = userLeads.filter(lead => {
     // Status filter
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
     
@@ -150,23 +160,15 @@ const Leads = () => {
            matchesState && matchesExamCategory && matchesSource && 
            matchesDateRange && matchesSearch;
     
-    // Debug filtering for first few leads
-    if (leads.indexOf(lead) < 3) {
-      console.log(`Lead ${lead.name} (${lead.email}) filtering:`, {
-        matchesStatus,
-        matchesSubscription,
-        matchesTrialStatus,
-        matchesState,
-        matchesExamCategory,
-        matchesSource,
-        matchesDateRange,
-        matchesSearch,
-        result
-      });
-    }
-    
     return result;
   });
+
+  // Debug logging for filtered leads
+  console.log('User ID:', userId);
+  console.log('User ID ready:', !!userId);
+  console.log('Total leads:', leads.length);
+  console.log('User leads:', userLeads.length);
+  console.log('Filtered leads:', filteredLeads.length);
 
   // Calculate statistics
   const totalLeads = leads.length;
@@ -362,6 +364,18 @@ const Leads = () => {
     });
   };
 
+  // Ensure we don't render before user ID is present
+  if (!userId) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your leads...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
 
@@ -380,27 +394,6 @@ const Leads = () => {
             <Zap className="w-4 h-4" />
             <span>Refresh</span>
           </button>
-
-          <button 
-            onClick={() => {
-              console.log('=== ALL LEADS DEBUG ===');
-              leads.forEach((lead, index) => {
-                console.log(`Lead ${index + 1}:`, {
-                  id: lead.id,
-                  name: lead.name,
-                  email: lead.email,
-                  status: lead.status,
-                  subscription_plan: lead.subscription_plan,
-                  created_at: lead.created_at
-                });
-              });
-              console.log('======================');
-            }}
-            className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors flex items-center space-x-2"
-          >
-            <Eye className="w-4 h-4" />
-            <span>Debug All</span>
-          </button>
           <button 
             onClick={() => setShowCSVImport(true)}
             className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
@@ -415,44 +408,6 @@ const Leads = () => {
             <Plus className="w-4 h-4" />
             <span>Add Lead</span>
           </button>
-        </div>
-      </div>
-
-      {/* Debug Info */}
-      <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <h3 className="font-semibold text-yellow-800 mb-2">Debug Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div>
-            <span className="font-medium">Authentication:</span> {isAuthenticated ? '✅ Authenticated' : '❌ Not Authenticated'}
-          </div>
-          <div>
-            <span className="font-medium">User ID:</span> {user?.id || 'None'}
-          </div>
-          <div>
-            <span className="font-medium">Total Leads:</span> {leads.length}
-          </div>
-        </div>
-        {leads.length > 0 && (
-          <div className="mt-2">
-            <span className="font-medium">Latest Lead:</span> {leads[0]?.name} ({leads[0]?.email})
-          </div>
-        )}
-        <div className="mt-2">
-          <span className="font-medium">Filtered Leads:</span> {filteredLeads.length} of {leads.length}
-        </div>
-        <div className="mt-2 text-xs">
-          <span className="font-medium">Active Filters:</span> 
-          {statusFilter !== 'all' && ` Status:${statusFilter}`}
-          {subscriptionFilter !== 'all' && ` Plan:${subscriptionFilter}`}
-          {trialStatusFilter !== 'all' && ` Trial:${trialStatusFilter}`}
-          {stateFilter !== 'all' && ` State:${stateFilter}`}
-          {examCategoryFilter !== 'all' && ` Category:${examCategoryFilter}`}
-          {sourceFilter !== 'all' && ` Source:${sourceFilter}`}
-          {dateRangeFilter !== 'all' && ` Date:${dateRangeFilter}`}
-          {searchTerm && ` Search:"${searchTerm}"`}
-          {statusFilter === 'all' && subscriptionFilter === 'all' && trialStatusFilter === 'all' && 
-           stateFilter === 'all' && examCategoryFilter === 'all' && sourceFilter === 'all' && 
-           dateRangeFilter === 'all' && !searchTerm && ' None'}
         </div>
       </div>
 
@@ -738,8 +693,8 @@ const Leads = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredLeads.map(lead => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredLeads.map(lead => (
           <div key={lead.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group">
             {/* Header with gradient */}
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 text-white">
@@ -888,7 +843,7 @@ const Leads = () => {
             </div>
           </div>
         ))}
-        </div>
+      </div>
       )}
 
       {/* Add Lead Modal */}

@@ -14,20 +14,128 @@ import {
   Download,
   Filter,
   Calendar,
-  BarChart3
+  BarChart3,
+  UserCheck,
+  UserX,
+  Activity,
+  Monitor,
+  Target
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell } from 'recharts';
+
+interface UserActivity {
+  id: string;
+  user_id: string;
+  page_name: string;
+  time_spent: number;
+  view_count: number;
+  visit_date: string;
+  leads?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface PageStats {
+  [key: string]: {
+    name: string;
+    time: number;
+    views: number;
+    users: Set<string>;
+  };
+}
+
+interface ActivityStats {
+  totalTime: number;
+  totalViews: number;
+  pageData: Array<{
+    name: string;
+    time: number;
+    views: number;
+    users: number;
+    percentage: string;
+  }>;
+  averageTimePerPage: number;
+}
 
 const Dashboard = () => {
   const { leads, campaigns, user } = useCRM();
   const [trialStatusFilter, setTrialStatusFilter] = useState<string>('all');
   const [chartPeriod, setChartPeriod] = useState<string>('30'); // 7, 30, 90 days
+  const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Real data from CRM context
-  const totalLeads = leads.length;
-  const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
-  const trialLeads = leads.filter(l => l.user_type === 'Trial User').length;
-  const paidLeads = leads.filter(l => l.is_subscription_active).length;
+  // Fetch user activities
+  const fetchUserActivities = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/user-activities');
+      const data = await response.json();
+      setUserActivities(data);
+    } catch (error) {
+      console.error('Error fetching user activities:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate activity statistics
+  const calculateActivityStats = (): ActivityStats | null => {
+    if (!userActivities.length) return null;
+
+    const pageStats: PageStats = {};
+    let totalTime = 0;
+    let totalViews = 0;
+
+    userActivities.forEach((activity: UserActivity) => {
+      const pageName = activity.page_name;
+      if (!pageStats[pageName]) {
+        pageStats[pageName] = {
+          name: pageName,
+          time: 0,
+          views: 0,
+          users: new Set()
+        };
+      }
+      pageStats[pageName].time += activity.time_spent || 0;
+      pageStats[pageName].views += activity.view_count || 1;
+      pageStats[pageName].users.add(activity.user_id);
+      totalTime += activity.time_spent || 0;
+      totalViews += activity.view_count || 1;
+    });
+
+    const pageData = Object.values(pageStats).map(page => ({
+      name: page.name,
+      time: page.time,
+      views: page.views,
+      users: page.users.size,
+      percentage: ((page.time / totalTime) * 100).toFixed(1)
+    }));
+
+    return {
+      totalTime,
+      totalViews,
+      pageData: pageData.sort((a, b) => b.time - a.time),
+      averageTimePerPage: totalTime / userActivities.length
+    };
+  };
+
+  const activityStats = calculateActivityStats();
+
+  // Calculate user statistics
+  const totalUsers = leads.length;
+  const activeUsers = leads.filter(l => {
+    if (l.trial_end_date) {
+      const trialEndDate = new Date(l.trial_end_date);
+      const today = new Date();
+      return trialEndDate > today;
+    }
+    // Check if subscription is active
+    return l.is_subscription_active || l.user_type === 'Paid User';
+  }).length;
+  const inactiveUsers = totalUsers - activeUsers;
+  const paidUsers = leads.filter(l => l.is_subscription_active || l.user_type === 'Paid User').length;
 
   // Process data for the line chart
   const processChartData = () => {
@@ -84,32 +192,32 @@ const Dashboard = () => {
 
   const stats = [
     {
-      title: 'Total Leads',
-      value: totalLeads.toLocaleString(),
+      title: 'Total Users',
+      value: totalUsers.toLocaleString(),
       icon: Users,
       color: 'bg-gradient-to-r from-blue-500 to-blue-600',
-      change: totalLeads > 0 ? `+${totalLeads}` : '0'
+      change: totalUsers > 0 ? `+${totalUsers}` : '0'
     },
     {
-      title: 'Active Campaigns',
-      value: activeCampaigns.toString(),
-      icon: Mail,
+      title: 'Active Users',
+      value: activeUsers.toString(),
+      icon: UserCheck,
       color: 'bg-gradient-to-r from-green-500 to-green-600',
-      change: activeCampaigns > 0 ? `+${activeCampaigns}` : '0'
+      change: activeUsers > 0 ? `+${activeUsers}` : '0'
     },
     {
-      title: 'Trial Users',
-      value: trialLeads.toString(),
-      icon: Clock,
-      color: 'bg-gradient-to-r from-purple-500 to-purple-600',
-      change: trialLeads > 0 ? `+${trialLeads}` : '0'
+      title: 'Inactive Users',
+      value: inactiveUsers.toString(),
+      icon: UserX,
+      color: 'bg-gradient-to-r from-red-500 to-red-600',
+      change: inactiveUsers > 0 ? `+${inactiveUsers}` : '0'
     },
     {
       title: 'Paid Users',
-      value: paidLeads.toString(),
+      value: paidUsers.toString(),
       icon: DollarSign,
       color: 'bg-gradient-to-r from-orange-500 to-orange-600',
-      change: paidLeads > 0 ? `+${paidLeads}` : '0'
+      change: paidUsers > 0 ? `+${paidUsers}` : '0'
     }
   ];
 
@@ -262,6 +370,144 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* User Activity Analytics */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100">
+        <div className="p-4 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">User Activity Analytics</h3>
+              <p className="text-xs text-gray-600 mt-1">Track user engagement and page performance</p>
+            </div>
+            <button 
+              onClick={fetchUserActivities}
+              disabled={loading}
+              className="bg-accent text-white px-3 py-1 rounded-lg hover:bg-accent-hover transition-colors text-sm flex items-center space-x-1 disabled:opacity-50"
+            >
+              <Activity className="w-4 h-4" />
+              <span>{loading ? 'Loading...' : 'Refresh Data'}</span>
+            </button>
+          </div>
+        </div>
+        
+        {activityStats ? (
+          <div className="p-4">
+            {/* Activity Summary Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-blue-600 font-medium">Total Time</p>
+                    <p className="text-lg font-bold text-blue-900">{activityStats.totalTime} min</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-green-50 p-3 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Eye className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="text-xs text-green-600 font-medium">Total Views</p>
+                    <p className="text-lg font-bold text-green-900">{activityStats.totalViews}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-purple-50 p-3 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Monitor className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <p className="text-xs text-purple-600 font-medium">Avg Time/Page</p>
+                    <p className="text-lg font-bold text-purple-900">{activityStats.averageTimePerPage.toFixed(1)} min</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-orange-50 p-3 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Target className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <p className="text-xs text-orange-600 font-medium">Active Pages</p>
+                    <p className="text-lg font-bold text-orange-900">{activityStats.pageData.length}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Page Performance Chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Page Performance</h4>
+                <div className="space-y-3">
+                  {activityStats.pageData.slice(0, 5).map((page, index) => (
+                    <div key={page.name} className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-900">{page.name}</span>
+                          <span className="text-xs text-gray-500">{page.percentage}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${page.percentage}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
+                          <span>{page.time} min</span>
+                          <span>{page.views} views</span>
+                          <span>{page.users} users</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Time Distribution</h4>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={activityStats.pageData.slice(0, 5)}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="time"
+                      >
+                        {activityStats.pageData.slice(0, 5).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][index % 5]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: any, name: any) => [`${value} min`, name]}
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-8 text-center">
+            <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-sm font-medium text-gray-900 mb-2">No Activity Data</h3>
+            <p className="text-xs text-gray-500 mb-4">Click "Refresh Data" to load user activity analytics</p>
+            <button 
+              onClick={fetchUserActivities}
+              disabled={loading}
+              className="bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent-hover transition-colors text-sm disabled:opacity-50"
+            >
+              {loading ? 'Loading...' : 'Load Activity Data'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Content Grid */}

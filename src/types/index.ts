@@ -2,6 +2,7 @@
 export interface Lead {
   id: string;
   user_id: string;
+  created_by?: string;
   name: string;
   first_name?: string | null;
   last_name?: string | null;

@@ -23,11 +23,11 @@ serve(async (req) => {
       throw new Error('Email is required');
     }
 
-    // ✅ Allowed subscription plans
-    const allowedPlans = ['Trial User', 'Paid', 'Unpaid', 'Enterprise'];
+    // ✅ Allowed subscription plans - must match database constraint
+    const allowedPlans = ['Trial', 'Paid', 'Unpaid'];
     const subscriptionPlan = allowedPlans.includes(registrationData.subscription_plan)
       ? registrationData.subscription_plan
-      : 'Trial User';
+      : 'Trial';
 
     let authUserId = registrationData.user_id;
 
@@ -74,7 +74,7 @@ serve(async (req) => {
         company: registrationData.company || existingLead.company,
         source: registrationData.source || existingLead.source || 'Software Registration',
         status: registrationData.status || existingLead.status || 'Active',
-        plan: registrationData.plan || existingLead.plan || 'Trial User',
+        plan: registrationData.plan || existingLead.plan || 'Trial',
         referral_code: registrationData.referral_code || existingLead.referral_code,
         user_type: registrationData.user_type || existingLead.user_type || 'Trial User',
         subscription_plan: subscriptionPlan || existingLead.subscription_plan,
@@ -132,7 +132,7 @@ serve(async (req) => {
         status: registrationData.status || 'Active',
         user_type: registrationData.user_type || 'Trial User',
         subscription_plan: subscriptionPlan, // ✅ Safe value here
-        plan: registrationData.plan || 'Trial User',
+        plan: registrationData.plan || 'Trial',
         referral_code: registrationData.referral_code,
         tags: registrationData.tags,
         value: registrationData.value,
@@ -145,7 +145,8 @@ serve(async (req) => {
         subscription_start_date: registrationData.subscription_start_date,
         subscription_end_date: registrationData.subscription_end_date,
         next_payment_date: registrationData.next_payment_date,
-        user_id: userId
+        user_id: userId,
+        created_by: registrationData.created_by || '8fd923c2-c497-4df3-8ada-7b3be64d5521' // CRM user
       };
 
       const { data: newLead, error } = await supabaseClient

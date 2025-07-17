@@ -20,7 +20,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard', locked: false },
     { path: '/leads', icon: Users, label: 'Leads', locked: false },
-    { path: '/user-activity', icon: Activity, label: 'User Activity', locked: true },
+    { path: '/user-activity', icon: Activity, label: 'User Activity', locked: false },
     { path: '/lists', icon: List, label: 'Lists', locked: true },
     { path: '/campaigns', icon: Mail, label: 'Campaigns', locked: true },
     { path: '/workflows', icon: Zap, label: 'Workflows', locked: true },

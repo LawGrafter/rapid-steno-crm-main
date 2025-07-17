@@ -47,36 +47,26 @@ export const useUserActivity = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch user activities with profile data
-      const { data: userActivitiesData, error: userActivitiesError } = await supabase
+      // Fetch user activities with lead data (user information)
+      const { data: activitiesData, error: activitiesError } = await supabase
         .from('user_activities')
         .select(`
           *,
-          profiles!inner (
-            full_name
+          leads (
+            id,
+            name,
+            email,
+            created_at
           )
         `)
-        .order('last_active', { ascending: false });
+        .order('created_at', { ascending: false });
 
-      if (userActivitiesError) {
-        throw userActivitiesError;
+      if (activitiesError) {
+        throw activitiesError;
       }
 
-      // Fetch activity logs for all users
-      const { data: activityLogsData, error: activityLogsError } = await supabase
-        .from('activity_logs')
-        .select('*')
-        .order('visit_date', { ascending: false });
-
-      if (activityLogsError) {
-        throw activityLogsError;
-      }
-
-      // Process and combine the data
-      const processedUserActivities = await processUserActivities(
-        userActivitiesData || [],
-        activityLogsData || []
-      );
+      // Process and group the data by user
+      const processedUserActivities = processUserActivities(activitiesData || []);
 
       setUserActivities(processedUserActivities);
     } catch (err) {
@@ -87,34 +77,44 @@ export const useUserActivity = () => {
     }
   };
 
-  const processUserActivities = async (
-    userActivitiesData: any[],
-    activityLogsData: ActivityLogRow[]
-  ): Promise<UserActivityData[]> => {
-    return userActivitiesData.map((user: any) => {
-      // Filter activity logs for this user
-      const userLogs = activityLogsData.filter(log => log.user_id === user.user_id);
+  const processUserActivities = (activitiesData: any[]): UserActivityData[] => {
+    // Group activities by user_id
+    const userGroups = activitiesData.reduce((acc: Record<string, { user: any; activities: any[] }>, activity: any) => {
+      const userId = activity.user_id;
+      if (!acc[userId]) {
+        acc[userId] = {
+          user: activity.leads,
+          activities: []
+        };
+      }
+      acc[userId].activities.push(activity);
+      return acc;
+    }, {} as Record<string, { user: any; activities: any[] }>);
+
+    // Process each user group
+    return Object.entries(userGroups).map(([userId, userData]) => {
+      const activities = userData.activities;
       
-      // Group logs by date
-      const logsByDate = userLogs.reduce((acc, log) => {
-        const date = log.visit_date;
+      // Group activities by date
+      const activitiesByDate = activities.reduce((acc: Record<string, any>, activity: any) => {
+        const date = activity.visit_date;
         if (!acc[date]) {
           acc[date] = [];
         }
-        acc[date].push(log);
+        acc[date].push(activity);
         return acc;
-      }, {} as Record<string, ActivityLogRow[]>);
+      }, {} as Record<string, any[]>);
 
       // Process activity logs
-      const activityLogs: ActivityLogData[] = Object.entries(logsByDate).map(([date, logs]: [string, ActivityLogRow[]]) => {
-        const totalTimeSpent = logs.reduce((sum: number, log: ActivityLogRow) => sum + (log.time_spent || 0), 0);
+      const activityLogs: ActivityLogData[] = Object.entries(activitiesByDate).map(([date, dayActivities]: [string, any[]]) => {
+        const totalTimeSpent = dayActivities.reduce((sum: number, activity: any) => sum + (activity.time_spent || 0), 0);
         
-        const activities: ActivityData[] = logs.map((log: ActivityLogRow, index: number) => ({
-          id: `${log.id}-${index}`,
-          type: log.page_name || 'Unknown',
-          timeSpent: log.time_spent || 0,
-          views: 1, // Each log represents one view
-          timestamp: new Date(log.timestamp || log.visit_date)
+        const activitiesList: ActivityData[] = dayActivities.map((activity: any, index: number) => ({
+          id: `${activity.id}-${index}`,
+          type: activity.page_name || 'Unknown',
+          timeSpent: activity.time_spent || 0,
+          views: activity.view_count || 1,
+          timestamp: new Date(activity.created_at || activity.visit_date)
         }));
 
         return {
@@ -122,36 +122,43 @@ export const useUserActivity = () => {
           date,
           dailyTimeSpent: totalTimeSpent,
           totalTimeSpent: totalTimeSpent,
-          activities
+          activities: activitiesList
         };
       }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       // Calculate metrics
-      const totalTimeAllTime = userLogs.reduce((sum, log) => sum + (log.time_spent || 0), 0);
-      const uniqueDates = new Set(userLogs.map(log => log.visit_date));
+      const totalTimeAllTime = activities.reduce((sum: number, activity: any) => sum + (activity.time_spent || 0), 0);
+      const uniqueDates = new Set(activities.map((activity: any) => activity.visit_date));
       const averageDailyTime = uniqueDates.size > 0 ? Math.round(totalTimeAllTime / uniqueDates.size) : 0;
       
       // Find favorite activity (most time spent)
-      const activityTimes = userLogs.reduce((acc, log) => {
-        const activity = log.page_name || 'Unknown';
-        acc[activity] = (acc[activity] || 0) + (log.time_spent || 0);
+      const activityTimes = activities.reduce((acc: Record<string, number>, activity: any) => {
+        const activityType = activity.page_name || 'Unknown';
+        acc[activityType] = (acc[activityType] || 0) + (activity.time_spent || 0);
         return acc;
       }, {} as Record<string, number>);
       
-      const favoriteActivity = Object.entries(activityTimes).reduce((prev: [string, number], current: [string, number]) => 
-        current[1] > prev[1] ? current : prev, ['Unknown', 0] as [string, number]
+      const favoriteActivity = Object.entries(activityTimes).reduce(
+        (prev: [string, number], current: [string, number]) =>
+          current[1] > prev[1] ? current : prev,
+        ['Unknown', 0] as [string, number]
       )[0];
 
+      // Find last active date
+      const lastActiveDate = activities.length > 0 
+        ? new Date(Math.max(...activities.map(a => new Date(a.created_at || a.visit_date).getTime())))
+        : new Date();
+
       return {
-        userId: user.user_id,
-        userName: user.profiles?.full_name || 'Unknown User',
-        userEmail: `user${user.user_id.slice(0,8)}@domain.com`, // placeholder since email not in schema
+        userId: userId,
+        userName: userData.user.name || 'Unknown User',
+        userEmail: userData.user.email || 'No email',
         totalTimeAllTime,
-        lastActiveDate: new Date(user.last_active || new Date()),
+        lastActiveDate,
         averageDailyTime,
         totalSessions: uniqueDates.size,
         favoriteActivity,
-        loginCount: user.login_count || 0,
+        loginCount: activities.length, // Using activity count as login count
         activityLogs
       };
     });
