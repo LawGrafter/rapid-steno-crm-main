@@ -11,6 +11,8 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncLogs, setSyncLogs] = useState<string[]>([]);
+  const [syncStartTime, setSyncStartTime] = useState<Date | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -19,6 +21,24 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
 
     return () => clearInterval(timer);
   }, []);
+
+  // Timer for sync progress
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isSyncing && syncStartTime) {
+      interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - syncStartTime.getTime()) / 1000);
+        setElapsedTime(elapsed);
+      }, 1000);
+    } else {
+      setElapsedTime(0);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isSyncing, syncStartTime]);
 
   const handleLogout = async () => {
     await signOut();
@@ -30,10 +50,24 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
     setSyncLogs(prev => [...prev, `[${timestamp}] ${message}`]);
   };
 
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const estimateRemainingTime = (elapsed: number, progress: number): string => {
+    if (progress === 0) return 'Calculating...';
+    const totalEstimated = (elapsed / progress) * 100;
+    const remaining = Math.max(0, totalEstimated - elapsed);
+    return formatTime(Math.floor(remaining));
+  };
+
   const handleSync = async () => {
     setIsSyncing(true);
     setShowSyncModal(true);
     setSyncLogs([]);
+    setSyncStartTime(new Date());
     setSyncStatus('Starting sync process...');
     
     addLog('🚀 Starting MongoDB to Supabase sync...');
@@ -200,13 +234,39 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
                 <Terminal className="w-5 h-5 text-blue-600" />
                 <h3 className="text-lg font-semibold text-gray-900">Sync Progress</h3>
               </div>
-              <button
-                onClick={() => setShowSyncModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-4">
+                {isSyncing && (
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <Clock className="w-4 h-4" />
+                    <span>Elapsed: {formatTime(elapsedTime)}</span>
+                    <span>•</span>
+                    <span>ETA: {estimateRemainingTime(elapsedTime, syncLogs.length > 2 ? 30 : 0)}</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowSyncModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
+
+            {/* Progress Bar */}
+            {isSyncing && (
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                  <span>Sync Progress</span>
+                  <span>{Math.min(100, Math.max(0, (syncLogs.length / 8) * 100)).toFixed(0)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.max(0, (syncLogs.length / 8) * 100))}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
 
             {/* Terminal-like Log Display */}
             <div className="flex-1 p-4 overflow-y-auto">
