@@ -19,20 +19,61 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // MongoDB connection
+    // MongoDB connection - try alternative approach
     const MONGODB_URI = Deno.env.get('MONGODB_URI')!
     
-    // Connect to MongoDB using Deno's MongoDB driver
+    // Use the exact same connection string as your working software
+    const username = 'rapidsteno'
+    const password = 'uXsGv3N8zO1mMBFi'
+    const host = 'rapidsteno.9l3v7.mongodb.net'
+    const database = 'rapidSteno'
+    
+    const altUri = `mongodb+srv://${username}:${password}@${host}/${database}?retryWrites=true&w=majority`
+    
+    // Connect to MongoDB using Deno's MongoDB driver with connection options
     const mongoClient = new MongoClient()
-    await mongoClient.connect(MONGODB_URI)
+    await mongoClient.connect(altUri, {
+      serverSelectionTimeoutMS: 30000,
+      connectTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 1,
+      retryWrites: true,
+      w: 'majority',
+      directConnection: false
+    })
     
     const db = mongoClient.database('rapidSteno')
     const usersCollection = db.collection('users')
     
-    // Get all users with activity logs
-    const users = await usersCollection.find({
-      'activity_logs': { $exists: true, $ne: [] }
+    // Get all users with activity logs (try different field names)
+    let users = await usersCollection.find({
+      'activityLogs': { $exists: true, $ne: [] }
     }).toArray()
+    
+    // If no users found with 'activityLogs', try other field names
+    if (users.length === 0) {
+      users = await usersCollection.find({
+        'activity_logs': { $exists: true, $ne: [] }
+      }).toArray()
+    }
+    
+    if (users.length === 0) {
+      users = await usersCollection.find({
+        'activities': { $exists: true, $ne: [] }
+      }).toArray()
+    }
+    
+    if (users.length === 0) {
+      users = await usersCollection.find({
+        'user_activities': { $exists: true, $ne: [] }
+      }).toArray()
+    }
+    
+    if (users.length === 0) {
+      users = await usersCollection.find({
+        'logs': { $exists: true, $ne: [] }
+      }).toArray()
+    }
     
     let totalSynced = 0
     let totalSkipped = 0
@@ -55,46 +96,79 @@ serve(async (req) => {
         const userId = supabaseUser.id
         
         // Process each activity log
-        for (const activity of user.activity_logs) {
+        const activityLogs = user.activityLogs || user.activity_logs || []
+        for (const activityLog of activityLogs) {
           try {
-            // Convert time from seconds to minutes
-            const timeSpentMinutes = Math.round(activity.time_spent / 60)
-            
-            const activityData = {
-              user_id: userId,
-              page_name: activity.page_name,
-              time_spent: timeSpentMinutes,
-              view_count: activity.view_count || 1,
-              visit_date: activity.visit_date,
-              total_active_time: Math.round(activity.total_active_time / 60),
-              total_pages_viewed: activity.total_pages_viewed,
-              last_active: activity.last_active,
-              login_count: activity.login_count || 0,
-              subscription_days_left: activity.subscription_days_left,
-              daily_time_spent: Math.round((activity.daily_time_spent || 0) / 60),
-              total_time_spent: Math.round((activity.total_time_spent || 0) / 60)
-            }
-            
-            // Insert activity with conflict handling
-            const { error: insertError } = await supabase
-              .from('user_activities')
-              .upsert(activityData, {
-                onConflict: 'user_id,page_name,visit_date,time_spent'
-              })
-            
-            if (insertError) {
-              console.log(`Error inserting activity for ${user.email}:`, insertError.message)
-              totalSkipped++
+            // Handle the new structure with pages array
+            if (activityLog.pages && Array.isArray(activityLog.pages)) {
+              for (const page of activityLog.pages) {
+                const activityData = {
+                  user_id: userId,
+                  page_name: page.page,
+                  time_spent: Math.round(page.timeSpent / 60), // Convert seconds to minutes
+                  view_count: page.viewCount || 1,
+                  visit_date: activityLog.date,
+                  total_active_time: Math.round(activityLog.totalActiveTime / 60),
+                  total_pages_viewed: activityLog.totalPagesViewed,
+                  last_active: user.lastActiveDate,
+                  login_count: user.loginCount || 0,
+                  subscription_days_left: null, // Not available in this structure
+                  daily_time_spent: Math.round(activityLog.totalActiveTime / 60),
+                  total_time_spent: Math.round(activityLog.totalActiveTime / 60)
+                }
+                
+                // Insert activity with conflict handling
+                const { error: insertError } = await supabase
+                  .from('user_activities')
+                  .upsert(activityData, {
+                    onConflict: 'user_id,page_name,visit_date,time_spent'
+                  })
+                
+                if (insertError) {
+                  console.log(`Error inserting activity for ${user.email}:`, insertError.message)
+                  totalSkipped++
+                } else {
+                  totalSynced++
+                }
+              }
             } else {
-              totalSynced++
+              // Handle old structure (fallback)
+              const timeSpentMinutes = Math.round((activityLog.time_spent || 0) / 60)
+              
+              const activityData = {
+                user_id: userId,
+                page_name: activityLog.page_name,
+                time_spent: timeSpentMinutes,
+                view_count: activityLog.view_count || 1,
+                visit_date: activityLog.visit_date,
+                total_active_time: Math.round((activityLog.total_active_time || 0) / 60),
+                total_pages_viewed: activityLog.total_pages_viewed,
+                last_active: activityLog.last_active,
+                login_count: activityLog.login_count || 0,
+                subscription_days_left: activityLog.subscription_days_left,
+                daily_time_spent: Math.round((activityLog.daily_time_spent || 0) / 60),
+                total_time_spent: Math.round((activityLog.total_time_spent || 0) / 60)
+              }
+              
+              // Insert activity with conflict handling
+              const { error: insertError } = await supabase
+                .from('user_activities')
+                .upsert(activityData, {
+                  onConflict: 'user_id,page_name,visit_date,time_spent'
+                })
+              
+              if (insertError) {
+                console.log(`Error inserting activity for ${user.email}:`, insertError.message)
+                totalSkipped++
+              } else {
+                totalSynced++
+              }
             }
-            
           } catch (activityError) {
             console.log(`Error processing activity for ${user.email}:`, activityError.message)
             totalSkipped++
           }
         }
-        
       } catch (userError) {
         console.log(`Error processing user ${user.email}:`, userError.message)
         totalSkipped++
@@ -105,11 +179,12 @@ serve(async (req) => {
     
     const result = {
       success: true,
-      message: 'Sync completed successfully',
+      message: users.length === 0 ? 'No activity data found to sync' : 'Sync completed successfully',
       summary: {
         totalSynced,
         totalSkipped,
-        totalUsers: users.length
+        totalUsers: users.length,
+        dataFound: users.length > 0
       }
     }
     
