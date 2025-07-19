@@ -26,3 +26,28 @@ dist-ssr
 
 # Local Netlify folder
 .netlify
+
+# Security - Credentials file
+CREDENTIALS.md
+
+# Database and sync scripts (one-time use)
+*.cjs
+sync-*.js
+check-*.js
+debug-*.js
+fix-*.js
+apply-*.js
+create-*.js
+
+# Temporary files
+.temp/
+*.tmp
+*.temp
+
+# Documentation files with sensitive info
+DATABASE_SETUP_GUIDE.md
+*_GUIDE.md
+*_README.md
+
+# Bolt directory
+.bolt/

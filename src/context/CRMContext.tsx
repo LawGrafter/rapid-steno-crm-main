@@ -104,7 +104,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Auth methods
   const signIn = async (email: string, password: string) => {
     // Simple local authentication
-    if (email === 'admin@rapidsteno.com' && password === 'admin123') {
+    if (email === 'info@rapidsteno.com' && password === 'Aquib@7754') {
       const user = {
         id: '1',
         email: email,

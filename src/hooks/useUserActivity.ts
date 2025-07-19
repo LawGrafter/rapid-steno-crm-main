@@ -1,8 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../integrations/supabase/client';
-import type { Database } from '../integrations/supabase/types';
-
-type ActivityLogRow = Database['public']['Tables']['activity_logs']['Row'];
 
 export interface UserActivityData {
   userId: string;
@@ -33,6 +29,16 @@ export interface ActivityData {
   timestamp: Date;
 }
 
+export interface LocalUserActivity {
+  id: string;
+  user_id: string;
+  page_name: string;
+  time_spent: number;
+  view_count: number;
+  visit_date: string;
+  created_at: string;
+}
+
 export const useUserActivity = () => {
   const [userActivities, setUserActivities] = useState<UserActivityData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,30 +53,16 @@ export const useUserActivity = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch user activities with lead data (user information)
-      // First, let's get all user activities
-      const { data: activitiesData, error: activitiesError } = await supabase
-        .from('user_activities')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Load data from localStorage
+      const savedActivities = localStorage.getItem('crm_user_activities');
+      const savedLeads = localStorage.getItem('crm_leads');
 
-      if (activitiesError) {
-        throw activitiesError;
-      }
-
-      // Now let's get all leads to match with activities
-      const { data: leadsData, error: leadsError } = await supabase
-        .from('leads')
-        .select('id, name, email, created_at')
-        .order('created_at', { ascending: false });
-
-      if (leadsError) {
-        throw leadsError;
-      }
+      const activitiesData: LocalUserActivity[] = savedActivities ? JSON.parse(savedActivities) : [];
+      const leadsData = savedLeads ? JSON.parse(savedLeads) : [];
 
       // Create a map of user_id to lead data for efficient lookup
       const leadsMap = new Map();
-      leadsData?.forEach(lead => {
+      leadsData?.forEach((lead: any) => {
         leadsMap.set(lead.id, lead);
       });
 
@@ -183,10 +175,33 @@ export const useUserActivity = () => {
     });
   };
 
+  // Add activity to localStorage
+  const addActivity = (activity: Omit<LocalUserActivity, 'id' | 'created_at'>) => {
+    try {
+      const savedActivities = localStorage.getItem('crm_user_activities');
+      const activities: LocalUserActivity[] = savedActivities ? JSON.parse(savedActivities) : [];
+      
+      const newActivity: LocalUserActivity = {
+        ...activity,
+        id: Date.now().toString(),
+        created_at: new Date().toISOString()
+      };
+      
+      const updatedActivities = [...activities, newActivity];
+      localStorage.setItem('crm_user_activities', JSON.stringify(updatedActivities));
+      
+      // Refresh the data
+      fetchUserActivities();
+    } catch (err) {
+      console.error('Error adding activity:', err);
+    }
+  };
+
   return {
     userActivities,
     loading,
     error,
-    refetch: fetchUserActivities
+    refetch: fetchUserActivities,
+    addActivity
   };
 };

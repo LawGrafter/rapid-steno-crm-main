@@ -1,76 +1,54 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
+  Users, 
   Clock, 
-  Calendar, 
-  Activity, 
+  BarChart3, 
+  TrendingUp, 
   Search, 
-  Download, 
-  Eye, 
-  TrendingUp,
-  BarChart3,
-  Users,
-  BookOpen,
-  Zap,
-  ChevronDown,
-  ChevronRight,
+  BarChart, 
   Loader2,
   AlertCircle
 } from 'lucide-react';
-import { useUserActivity } from '../hooks/useUserActivity';
+import { useUserActivityV2 } from '../hooks/useUserActivityV2';
 
 const UserActivity = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('7d');
-  const [activityFilter, setActivityFilter] = useState('all');
-  const [selectedUser, setSelectedUser] = useState<any | null>(null);
-  const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
-  const { userActivities, loading, error, refetch } = useUserActivity();
+  const { userActivities, loading, error, refetch } = useUserActivityV2();
 
+  // Filter users based on search term
   const filteredUsers = userActivities.filter(user => {
     const matchesSearch = user.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.userEmail.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'Settings': return <Eye className="w-4 h-4 text-gray-600" />;
-      case 'Court Dictation': return <BookOpen className="w-4 h-4 text-blue-600" />;
-      case 'MyGrowth': return <TrendingUp className="w-4 h-4 text-green-600" />;
-      case 'SpeedBoosterDictations': return <Zap className="w-4 h-4 text-orange-600" />;
-      default: return <Activity className="w-4 h-4 text-gray-600" />;
+  const formatTime = (seconds: number) => {
+    if (seconds >= 3600) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      return `${hours}h ${minutes}m`;
+    } else if (seconds >= 60) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s`;
     }
+    return `${seconds}s`;
   };
 
-  const getActivityColor = (type: string) => {
-    switch (type) {
-      case 'Settings': return 'bg-gray-100 text-gray-800';
-      case 'Court Dictation': return 'bg-blue-100 text-blue-800';
-      case 'MyGrowth': return 'bg-green-100 text-green-800';
-      case 'SpeedBoosterDictations': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const getActivityTag = (totalTime: number, totalSessions: number) => {
+    // Calculate activity score (time + sessions weighted)
+    const timeScore = totalTime / 3600; // Convert to hours
+    const sessionScore = totalSessions * 0.5; // Weight sessions
+    const activityScore = timeScore + sessionScore;
 
-  const formatTime = (minutes: number) => {
-    if (minutes === 0) return '0 min';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    }
-    return `${mins} min`;
-  };
-
-  const toggleLogExpansion = (logId: string) => {
-    const newExpanded = new Set(expandedLogs);
-    if (newExpanded.has(logId)) {
-      newExpanded.delete(logId);
-    } else {
-      newExpanded.add(logId);
-    }
-    setExpandedLogs(newExpanded);
+    if (activityScore >= 10) return { text: 'Most Active', color: 'bg-green-100 text-green-800' };
+    if (activityScore >= 5) return { text: 'High Activity', color: 'bg-blue-100 text-blue-800' };
+    if (activityScore >= 2) return { text: 'Moderate Activity', color: 'bg-yellow-100 text-yellow-800' };
+    if (activityScore >= 0.5) return { text: 'Low Activity', color: 'bg-gray-100 text-gray-800' };
+    return { text: 'Inactive', color: 'bg-red-100 text-red-800' };
   };
 
   const totalActiveUsers = userActivities.length;
@@ -88,7 +66,7 @@ const UserActivity = () => {
       <div className="p-6 flex items-center justify-center min-h-64">
         <div className="flex items-center space-x-2">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span className="text-gray-600">Loading user activity data...</span>
+          <span className="text-gray-600">Loading user activity data from Supabase...</span>
         </div>
       </div>
     );
@@ -118,7 +96,7 @@ const UserActivity = () => {
         <div className="text-center">
           <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No User Activity Data</h3>
-          <p className="text-gray-600">No user activity data has been synced yet.</p>
+          <p className="text-gray-600">No user activity data has been synced from Supabase yet.</p>
         </div>
       </div>
     );
@@ -129,28 +107,13 @@ const UserActivity = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">User Activity</h1>
-          <p className="text-gray-600">Monitor user engagement and learning progress</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <select
-            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-          >
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-          </select>
-          <button className="bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent-hover transition-colors flex items-center space-x-2">
-            <Download className="w-4 h-4" />
-            <span>Export</span>
-          </button>
+          <p className="text-gray-600">Monitor user engagement and learning progress from Supabase</p>
         </div>
       </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 font-medium">Active Users</p>
@@ -161,7 +124,7 @@ const UserActivity = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 font-medium">Total Time Spent</p>
@@ -172,7 +135,7 @@ const UserActivity = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 font-medium">Avg Session Time</p>
@@ -183,7 +146,7 @@ const UserActivity = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 font-medium">Most Active User</p>
@@ -201,191 +164,81 @@ const UserActivity = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-          <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search users..."
-                className="pl-10 pr-4 py-2 w-full sm:w-64 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <select
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-              value={activityFilter}
-              onChange={(e) => setActivityFilter(e.target.value)}
-            >
-              <option value="all">All Activities</option>
-              <option value="Settings">Settings</option>
-              <option value="Court Dictation">Court Dictation</option>
-              <option value="MyGrowth">MyGrowth</option>
-              <option value="SpeedBoosterDictations">Speed Booster</option>
-            </select>
+      {/* Search and Filters */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-900">
+              User Activities ({filteredUsers.length} of {userActivities.length} users)
+            </h2>
+          </div>
+        </div>
+        <div className="p-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search by user name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
         </div>
       </div>
 
       {/* User Activity List */}
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredUsers.map((user) => (
-          <div key={user.userId} className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
-                    {user.userName && user.userName.length > 0 ? user.userName.charAt(0).toUpperCase() : '?'}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{user.userName}</h3>
-                    <p className="text-sm text-gray-600">{user.userEmail}</p>
-                    <p className="text-xs text-gray-500">Last active: {user.lastActiveDate.toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Total Time</p>
-                    <p className="text-lg font-bold text-gray-900">{formatTime(user.totalTimeAllTime)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Avg Daily</p>
-                    <p className="text-lg font-bold text-gray-900">{formatTime(user.averageDailyTime)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Sessions</p>
-                    <p className="text-lg font-bold text-gray-900">{user.totalSessions}</p>
-                  </div>
-                  <button
-                    onClick={() => setSelectedUser(selectedUser?.userId === user.userId ? null : user)}
-                    className="text-primary hover:text-primary-hover"
-                  >
-                    <Eye className="w-5 h-5" />
-                  </button>
-                </div>
+          <div key={user.userId} className="bg-white rounded-xl shadow-md border border-gray-200 p-6 h-52 flex flex-col">
+            {/* User Info */}
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 font-semibold text-lg">
+                  {user.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                </span>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Favorite Activity</p>
-                  <div className="flex items-center space-x-2">
-                    {getActivityIcon(user.favoriteActivity)}
-                    <span className="font-medium text-gray-900">{user.favoriteActivity}</span>
-                  </div>
+              <div className="flex-1">
+                <div className="flex items-center space-x-2 mb-1">
+                  <h3 className="text-base font-semibold text-gray-900">{user.userName}</h3>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getActivityTag(user.totalTimeAllTime, user.totalSessions).color}`}>
+                    {getActivityTag(user.totalTimeAllTime, user.totalSessions).text}
+                  </span>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Recent Activity</p>
-                  <p className="font-medium text-gray-900">
-                    {user.activityLogs.length > 0 ? user.activityLogs[user.activityLogs.length - 1].date : 'No activity'}
-                  </p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Engagement Level</p>
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-3 h-3 rounded-full ${user.averageDailyTime > 20 ? 'bg-green-500' : user.averageDailyTime > 10 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
-                    <span className="font-medium text-gray-900">
-                      {user.averageDailyTime > 20 ? 'High' : user.averageDailyTime > 10 ? 'Medium' : 'Low'}
-                    </span>
-                  </div>
-                </div>
+                <p className="text-xs text-gray-500 truncate">{user.userEmail}</p>
               </div>
-
-              {/* Activity Logs */}
-              {selectedUser?.userId === user.userId && (
-                <div className="border-t border-gray-200 pt-4">
-                  <h4 className="font-semibold text-gray-900 mb-4">Activity Logs</h4>
-                  <div className="space-y-3">
-                    {user.activityLogs.map((log) => (
-                      <div key={log.id} className="border border-gray-200 rounded-lg">
-                        <div 
-                          className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={() => toggleLogExpansion(log.id)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <div className="flex items-center space-x-2">
-                                {expandedLogs.has(log.id) ? 
-                                  <ChevronDown className="w-4 h-4 text-gray-500" /> : 
-                                  <ChevronRight className="w-4 h-4 text-gray-500" />
-                                }
-                                <Calendar className="w-4 h-4 text-gray-500" />
-                                <span className="font-medium text-gray-900">{log.date}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-6">
-                              <div className="text-center">
-                                <p className="text-xs text-gray-500">Daily Time</p>
-                                <p className="font-medium text-gray-900">{formatTime(log.dailyTimeSpent)}</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-xs text-gray-500">Total Time</p>
-                                <p className="font-medium text-gray-900">{formatTime(log.totalTimeSpent)}</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-xs text-gray-500">Activities</p>
-                                <p className="font-medium text-gray-900">{log.activities.length}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {expandedLogs.has(log.id) && (
-                          <div className="border-t border-gray-200 p-4 bg-gray-50">
-                            <div className="space-y-3">
-                              {log.activities.map((activity) => (
-                                <div key={activity.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-                                  <div className="flex items-center space-x-3">
-                                    {getActivityIcon(activity.type)}
-                                    <div>
-                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getActivityColor(activity.type)}`}>
-                                        {activity.type}
-                                      </span>
-                                      <p className="text-xs text-gray-500 mt-1">
-                                        {activity.timestamp.toLocaleTimeString()}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center space-x-4 text-sm">
-                                    <div className="text-center">
-                                      <p className="text-gray-500">Time</p>
-                                      <p className="font-medium">{formatTime(activity.timeSpent)}</p>
-                                    </div>
-                                    <div className="text-center">
-                                      <p className="text-gray-500">Views</p>
-                                      <p className="font-medium">{activity.views}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                              <p className="text-sm text-blue-800">
-                                <strong>Total:</strong> {formatTime(log.totalTimeSpent)} | 
-                                <strong> Pages Viewed:</strong> {log.activities.reduce((sum, a) => sum + a.views, 0)}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="text-center">
+                <p className="text-xs text-gray-500">Total Time</p>
+                <p className="text-sm font-semibold text-gray-900">{formatTime(user.totalTimeAllTime)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-500">Total Sessions</p>
+                <p className="text-sm font-semibold text-gray-900">{user.totalSessions}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-500">Last Active</p>
+                <p className="text-xs font-medium text-gray-900">
+                  {user.lastActiveDate.toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            
+            {/* Analytics Button */}
+            <button
+              onClick={() => navigate(`/user-detail/${user.userId}`)}
+              className="w-full flex items-center justify-center space-x-2 px-3 py-3 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors shadow-sm mt-auto"
+              style={{ backgroundColor: '#002E2C' }}
+            >
+              <BarChart className="w-4 h-4" />
+              <span>Detailed Analytics</span>
+            </button>
           </div>
         ))}
       </div>
-
-      {filteredUsers.length === 0 && (
-        <div className="text-center py-12">
-          <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No user activity found</h3>
-          <p className="text-gray-600">Try adjusting your search or filters</p>
-        </div>
-      )}
     </div>
   );
 };

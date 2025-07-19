@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Calendar } from 'lucide-react';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, signUp } = useCRM();
-  const [isLogin, setIsLogin] = useState(true);
+  const { signIn } = useCRM();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showBirthdayVerification, setShowBirthdayVerification] = useState(false);
+  const [day, setDay] = useState('');
+  const [month, setMonth] = useState('');
+  const [birthdayError, setBirthdayError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,17 +22,13 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      let result;
-      if (isLogin) {
-        result = await signIn(email, password);
-      } else {
-        result = await signUp(email, password, fullName);
-      }
+      const result = await signIn(email, password);
 
       if (result.error) {
         setError(result.error.message || 'An error occurred');
       } else {
-        navigate('/dashboard');
+        // Show birthday verification instead of navigating directly
+        setShowBirthdayVerification(true);
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -39,47 +37,149 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleBirthdayVerification = (e: React.FormEvent) => {
+    e.preventDefault();
+    setBirthdayError('');
+
+    // Check if birthday matches (30 October)
+    if (day === '30' && month === '10') {
+      navigate('/dashboard');
+    } else {
+      setBirthdayError('Incorrect birthday. Please try again.');
+    }
+  };
+
+  const months = [
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+  ];
+
+  const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+
+  if (showBirthdayVerification) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#002E2C]/10 to-[#002E2C]/20 flex items-center justify-center p-4">
+        <div className="max-w-md w-full space-y-8">
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="mx-auto w-16 h-16 bg-[#002E2C]/10 rounded-full flex items-center justify-center mb-4">
+                <Calendar className="w-8 h-8 text-[#002E2C]" />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900">
+                Extra Verification
+              </h2>
+              <p className="text-gray-600 mt-2">
+                Please enter your birthday for additional security
+              </p>
+            </div>
+
+            {/* Birthday Form */}
+            <form onSubmit={handleBirthdayVerification} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="day" className="block text-sm font-medium text-gray-700 mb-2">
+                    Day
+                  </label>
+                  <select
+                    id="day"
+                    value={day}
+                    onChange={(e) => setDay(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002E2C] focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select Day</option>
+                    {days.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="month" className="block text-sm font-medium text-gray-700 mb-2">
+                    Month
+                  </label>
+                  <select
+                    id="month"
+                    value={month}
+                    onChange={(e) => setMonth(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002E2C] focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select Month</option>
+                    {months.map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {birthdayError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-sm text-red-600">{birthdayError}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full bg-[#002E2C] text-white py-3 px-4 rounded-lg hover:bg-[#002E2C]/90 focus:ring-2 focus:ring-[#002E2C] focus:ring-offset-2 transition-colors font-medium"
+              >
+                Verify & Continue
+              </button>
+            </form>
+
+            {/* Back to Login */}
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => {
+                  setShowBirthdayVerification(false);
+                  setEmail('');
+                  setPassword('');
+                  setError('');
+                  setDay('');
+                  setMonth('');
+                  setBirthdayError('');
+                }}
+                className="text-[#002E2C] hover:text-[#002E2C]/80 font-medium text-sm"
+              >
+                ← Back to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#002E2C]/10 to-[#002E2C]/20 flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <User className="w-8 h-8 text-blue-600" />
+            <div className="mx-auto w-16 h-16 bg-[#002E2C]/10 rounded-full flex items-center justify-center mb-4">
+              <User className="w-8 h-8 text-[#002E2C]" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">
-              {isLogin ? 'Welcome Back' : 'Create Account'}
+              Welcome Back
             </h2>
             <p className="text-gray-600 mt-2">
-              {isLogin 
-                ? 'Sign in to your Rapid Steno CRM account' 
-                : 'Get started with your free CRM account'
-              }
+              Sign in to your Rapid Steno CRM account
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {!isLogin && (
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <input
-                    id="fullName"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your full name"
-                    required={!isLogin}
-                  />
-                </div>
-              </div>
-            )}
-
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
@@ -91,7 +191,7 @@ const Login: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002E2C] focus:border-transparent"
                   placeholder="Enter your email"
                   required
                 />
@@ -109,7 +209,7 @@ const Login: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002E2C] focus:border-transparent"
                   placeholder="Enter your password"
                   required
                 />
@@ -132,43 +232,11 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full bg-[#002E2C] text-white py-3 px-4 rounded-lg hover:bg-[#002E2C]/90 focus:ring-2 focus:ring-[#002E2C] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
-              {loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Create Account')}
+              {loading ? 'Loading...' : 'Sign In'}
             </button>
           </form>
-
-          {/* Toggle */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <button
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError('');
-                  setEmail('');
-                  setPassword('');
-                  setFullName('');
-                }}
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                {isLogin ? 'Sign up' : 'Sign in'}
-              </button>
-            </p>
-          </div>
-
-          {/* Demo Credentials */}
-          {isLogin && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
-              <p className="text-xs text-gray-500">
-                Email: <span className="font-mono">admin@rapidsteno.com</span>
-              </p>
-              <p className="text-xs text-gray-500">
-                Password: <span className="font-mono">admin123</span>
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>
