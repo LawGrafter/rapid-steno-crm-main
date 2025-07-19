@@ -48,25 +48,40 @@ export const useUserActivity = () => {
       setError(null);
 
       // Fetch user activities with lead data (user information)
+      // First, let's get all user activities
       const { data: activitiesData, error: activitiesError } = await supabase
         .from('user_activities')
-        .select(`
-          *,
-          leads (
-            id,
-            name,
-            email,
-            created_at
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (activitiesError) {
         throw activitiesError;
       }
 
+      // Now let's get all leads to match with activities
+      const { data: leadsData, error: leadsError } = await supabase
+        .from('leads')
+        .select('id, name, email, created_at')
+        .order('created_at', { ascending: false });
+
+      if (leadsError) {
+        throw leadsError;
+      }
+
+      // Create a map of user_id to lead data for efficient lookup
+      const leadsMap = new Map();
+      leadsData?.forEach(lead => {
+        leadsMap.set(lead.id, lead);
+      });
+
+      // Add lead data to activities
+      const activitiesWithLeads = activitiesData?.map(activity => ({
+        ...activity,
+        leads: leadsMap.get(activity.user_id) || null
+      })) || [];
+
       // Process and group the data by user
-      const processedUserActivities = processUserActivities(activitiesData || []);
+      const processedUserActivities = processUserActivities(activitiesWithLeads);
 
       setUserActivities(processedUserActivities);
     } catch (err) {
@@ -86,6 +101,10 @@ export const useUserActivity = () => {
           user: activity.leads,
           activities: []
         };
+      }
+      // If we don't have user data yet, try to get it from this activity
+      if (!acc[userId].user && activity.leads) {
+        acc[userId].user = activity.leads;
       }
       acc[userId].activities.push(activity);
       return acc;
@@ -151,8 +170,8 @@ export const useUserActivity = () => {
 
       return {
         userId: userId,
-        userName: userData.user.name || 'Unknown User',
-        userEmail: userData.user.email || 'No email',
+        userName: userData.user?.name || 'Unknown User',
+        userEmail: userData.user?.email || 'No email',
         totalTimeAllTime,
         lastActiveDate,
         averageDailyTime,

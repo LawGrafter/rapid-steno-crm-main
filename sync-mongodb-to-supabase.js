@@ -60,20 +60,33 @@ async function syncUsers(mongoClient, supabase) {
       const trialDates = await calculateTrialDates(user);
       
       // Prepare user data for Supabase
+      const firstName = user.firstName || user.name?.split(' ')[0] || '';
+      const lastName = user.lastName || user.name?.split(' ').slice(1).join(' ') || '';
+      const fullName = `${firstName} ${lastName}`.trim() || user.email;
+      
       const userData = {
+        // REQUIRED FIELDS
+        name: fullName,
+        user_id: '8fd923c2-c497-4df3-8ada-7b3be64d5521', // Default CRM user ID
+        created_by: '8fd923c2-c497-4df3-8ada-7b3be64d5521', // Default CRM user ID
+        
+        // User details
         email: user.email.trim(),
-        first_name: user.firstName || user.name?.split(' ')[0] || '',
-        last_name: user.lastName || user.name?.split(' ').slice(1).join(' ') || '',
+        first_name: firstName,
+        last_name: lastName,
         phone: user.phone || user.mobile || '',
-        status: trialDates.isTrialActive ? 'trial' : 'expired',
-        subscription_plan: 'free',
+        status: trialDates.isTrialActive ? 'Active' : 'Inactive',
+        subscription_plan: 'Trial',
         trial_start_date: trialDates.trialStartDate,
         trial_end_date: trialDates.trialEndDate,
-        subscription_days_left: trialDates.daysLeft,
+        is_trial_active: trialDates.isTrialActive,
+        is_subscription_active: false,
+        amount_paid: 0,
+        value: 0,
+        user_type: 'Trial User',
+        plan: 'Trial User',
+        source: user.source || user.howDidYouHear || 'MongoDB Sync',
         how_did_you_hear: user.source || user.howDidYouHear || 'MongoDB Sync',
-        registration_date: user.registrationDate || user.createdAt || new Date().toISOString(),
-        registration_source: 'mongodb_sync',
-        last_active: user.lastActiveDate || new Date().toISOString(),
         notes: `Synced from MongoDB on ${new Date().toISOString()}. Original ID: ${user._id}. Trial Status: ${trialDates.isTrialActive ? 'Active' : 'Expired'}`,
         created_at: user.createdAt || new Date().toISOString(),
         updated_at: new Date().toISOString()

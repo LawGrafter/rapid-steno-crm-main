@@ -96,11 +96,11 @@ const Leads = () => {
     setShowAddForm(false);
   };
 
-  // Filter leads by created_by first, then apply other filters
+  // Show all leads (not filtered by created_by since sync data comes from MongoDB)
   const userLeads = useMemo(() => {
-    if (!leads || !userId) return [];
-    return leads.filter((lead) => lead.created_by === userId);
-  }, [leads, userId]);
+    if (!leads) return [];
+    return leads;
+  }, [leads]);
     
   const filteredLeads = userLeads.filter(lead => {
     // Status filter
@@ -164,10 +164,8 @@ const Leads = () => {
   });
 
   // Debug logging for filtered leads
-  console.log('User ID:', userId);
-  console.log('User ID ready:', !!userId);
   console.log('Total leads:', leads.length);
-  console.log('User leads:', userLeads.length);
+  console.log('All leads (no filtering):', userLeads.length);
   console.log('Filtered leads:', filteredLeads.length);
 
   // Calculate statistics

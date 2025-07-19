@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import {
   Users,
@@ -60,11 +60,17 @@ interface ActivityStats {
 }
 
 const Dashboard = () => {
-  const { leads, campaigns, user } = useCRM();
+  const { leads, campaigns, user, refreshData } = useCRM();
   const [trialStatusFilter, setTrialStatusFilter] = useState<string>('all');
   const [chartPeriod, setChartPeriod] = useState<string>('30'); // 7, 30, 90 days
   const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Load data when component mounts
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
+
 
   // Fetch user activities
   const fetchUserActivities = async () => {
@@ -200,24 +206,24 @@ const Dashboard = () => {
     },
     {
       title: 'Active Users',
-      value: activeUsers.toString(),
+      value: activeUsers.toLocaleString(),
       icon: UserCheck,
       color: 'bg-gradient-to-r from-green-500 to-green-600',
       change: activeUsers > 0 ? `+${activeUsers}` : '0'
     },
     {
+      title: 'Paid Users',
+      value: paidUsers.toLocaleString(),
+      icon: CreditCard,
+      color: 'bg-gradient-to-r from-purple-500 to-purple-600',
+      change: paidUsers > 0 ? `+${paidUsers}` : '0'
+    },
+    {
       title: 'Inactive Users',
-      value: inactiveUsers.toString(),
+      value: inactiveUsers.toLocaleString(),
       icon: UserX,
       color: 'bg-gradient-to-r from-red-500 to-red-600',
       change: inactiveUsers > 0 ? `+${inactiveUsers}` : '0'
-    },
-    {
-      title: 'Paid Users',
-      value: paidUsers.toString(),
-      icon: DollarSign,
-      color: 'bg-gradient-to-r from-orange-500 to-orange-600',
-      change: paidUsers > 0 ? `+${paidUsers}` : '0'
     }
   ];
 
@@ -230,15 +236,15 @@ const Dashboard = () => {
 
   const getStatusColor = (daysLeft: number) => {
     if (daysLeft < 0) return 'bg-red-100 text-red-800';
-    if (daysLeft <= 3) return 'bg-orange-100 text-orange-800';
+    if (daysLeft <= 3) return 'bg-red-100 text-red-800';
     if (daysLeft <= 7) return 'bg-yellow-100 text-yellow-800';
     return 'bg-green-100 text-green-800';
   };
 
   const getDaysText = (daysLeft: number) => {
-    if (daysLeft < 0) return `${Math.abs(daysLeft)}d overdue`;
+    if (daysLeft < 0) return `${Math.abs(daysLeft)}d expired`;
     if (daysLeft === 0) return 'Expires today';
-    if (daysLeft === 1) return '1 day left';
+    if (daysLeft === 1) return '1d left';
     return `${daysLeft}d left`;
   };
 
@@ -261,6 +267,8 @@ const Dashboard = () => {
           </button>
         </div>
       </div>
+
+
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -439,7 +447,7 @@ const Dashboard = () => {
                 <h4 className="text-sm font-semibold text-gray-900 mb-3">Page Performance</h4>
                 <div className="space-y-3">
                   {activityStats.pageData.slice(0, 5).map((page, index) => (
-                    <div key={page.name} className="flex items-center justify-between">
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-medium text-gray-900">{page.name}</span>
@@ -567,14 +575,14 @@ const Dashboard = () => {
                           <div className="flex items-center">
                             <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-xs mr-2">
                               {(lead.name || `${lead.first_name} ${lead.last_name}`).charAt(0)}
-        </div>
-            <div>
+                            </div>
+                            <div>
                               <div className="text-sm font-medium text-gray-900 truncate max-w-32">
                                 {lead.name || `${lead.first_name} ${lead.last_name}`}
-            </div>
+                              </div>
                               <div className="text-xs text-gray-500 truncate max-w-32">{lead.email}</div>
-            </div>
-          </div>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm text-gray-900 capitalize">{lead.plan || 'Trial'}</div>
@@ -600,7 +608,7 @@ const Dashboard = () => {
                         <Clock className="w-8 h-8 text-gray-400" />
                         <h3 className="text-sm font-medium text-gray-900">No trial users found</h3>
                         <p className="text-xs text-gray-500">When you have users on trial, they will appear here.</p>
-        </div>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -628,13 +636,13 @@ const Dashboard = () => {
                     </p>
                   </div>
                   <p className="text-xs text-gray-600 truncate">{lead.email}</p>
-                <div className="flex items-center space-x-2 mt-1">
+                  <div className="flex items-center space-x-2 mt-1">
                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
                       {lead.source || 'Direct'}
                     </span>
                     <span className="text-xs text-gray-500">
                       {new Date(lead.created_at).toLocaleDateString()}
-                  </span>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -645,7 +653,7 @@ const Dashboard = () => {
                 <p className="text-xs">Start by creating your first lead.</p>
               </div>
             )}
-            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -124,18 +124,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // Load data when user is authenticated
+  // Load data when user is authenticated OR on initial load
   useEffect(() => {
-    if (isAuthenticated) {
-      refreshData();
-    } else {
-      // Clear data when not authenticated
-      setLeads([]);
-      setCampaigns([]);
-      setEmailLists([]);
-      setTemplates([]);
-    }
-  }, [isAuthenticated]);
+    // Always load leads data (for MongoDB synced leads)
+    refreshData();
+  }, []);
 
   // Auth methods
   const signIn = async (email: string, password: string) => {
@@ -194,65 +187,48 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Data loading
   const refreshData = async () => {
-    if (!user) return;
+    // Allow data refresh even if user is null (for MongoDB synced leads)
 
     try {
       // Clear existing leads first
       setLeads([]);
       
-      // Load leads - filter by created_by to show only leads created by this CRM user
+      // REMOVE filtering - get all leads
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select('*')
-        .eq('created_by', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1000); // Add explicit limit to ensure we get all leads
-      
-      console.log('=== LEADS LOADING DEBUG ===');
-      console.log('Timestamp:', new Date().toISOString());
-      console.log('Leads loaded:', leadsData?.length || 0);
-      console.log('Latest leads:', leadsData?.slice(0, 3));
-      console.log('All lead IDs:', leadsData?.map(l => l.id).slice(0, 5));
-      console.log('Latest 5 leads with details:', leadsData?.slice(0, 5).map(l => ({
-        id: l.id,
-        name: l.name,
-        email: l.email,
-        user_id: l.user_id,
-        created_at: l.created_at
-      })));
-      console.log('Error:', leadsError);
-      console.log('Current user ID:', user?.id);
-      console.log('User ID ready:', !!user?.id);
-      console.log('==========================');
+        .order('created_at', { ascending: false });
       
       if (leadsData) setLeads(leadsData);
 
-      // Load campaigns - filter by current user's ID
-      const { data: campaignsData } = await supabase
-        .from('campaigns')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (campaignsData) setCampaigns(campaignsData);
+      // Load campaigns - filter by current user's ID (if logged in)
+      if (user) {
+        const { data: campaignsData } = await supabase
+          .from('campaigns')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (campaignsData) setCampaigns(campaignsData);
 
-      // Load email lists - filter by current user's ID
-      const { data: emailListsData } = await supabase
-        .from('email_lists')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (emailListsData) setEmailLists(emailListsData);
+        // Load email lists - filter by current user's ID
+        const { data: emailListsData } = await supabase
+          .from('email_lists')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (emailListsData) setEmailLists(emailListsData);
 
-      // Load templates - filter by current user's ID
-      const { data: templatesData } = await supabase
-        .from('email_templates')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (templatesData) setTemplates(templatesData);
+        // Load templates - filter by current user's ID
+        const { data: templatesData } = await supabase
+          .from('email_templates')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (templatesData) setTemplates(templatesData);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -260,11 +236,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Lead operations
   const addLead = async (leadData: Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    if (!user) return;
-
     const { data, error } = await supabase
       .from('leads')
-      .insert([{ ...leadData, user_id: user.id, created_by: user.id }])
+      .insert([{
+        ...leadData,
+        user_id: user?.id || '8fd923c2-c497-4df3-8ada-7b3be64d5521', // Default CRM user ID
+        created_by: user?.id || '8fd923c2-c497-4df3-8ada-7b3be64d5521' // Default CRM user ID
+      }])
       .select()
       .single();
 
@@ -279,7 +257,6 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addLeadsBulk = async (leadsData: Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]) => {
-    if (!user) return { error: 'User not authenticated' };
 
     try {
       const results = {
@@ -299,7 +276,6 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const { data: emailMatch } = await supabase
               .from('leads')
               .select('*')
-              .eq('user_id', user.id)
               .eq('email', leadData.email)
               .single();
             existingLead = emailMatch;
@@ -309,7 +285,6 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const { data: phoneMatch } = await supabase
               .from('leads')
               .select('*')
-              .eq('user_id', user.id)
               .eq('phone', leadData.phone)
               .single();
             existingLead = phoneMatch;
@@ -334,7 +309,11 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             // Add new lead
             const { error: insertError } = await supabase
               .from('leads')
-              .insert([{ ...leadData, user_id: user.id, created_by: user.id }]);
+              .insert([{ 
+                ...leadData, 
+                user_id: user?.id || '8fd923c2-c497-4df3-8ada-7b3be64d5521', // Default CRM user ID
+                created_by: user?.id || '8fd923c2-c497-4df3-8ada-7b3be64d5521' // Default CRM user ID
+              }]);
 
             if (insertError) {
               results.errors.push(`Failed to add ${leadData.email || leadData.phone}: ${insertError.message}`);

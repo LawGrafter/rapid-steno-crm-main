@@ -238,7 +238,7 @@ const UserActivity = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
-                    {user.userName.charAt(0)}
+                    {user.userName && user.userName.length > 0 ? user.userName.charAt(0).toUpperCase() : '?'}
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">{user.userName}</h3>

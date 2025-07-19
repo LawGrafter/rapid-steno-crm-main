@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 
 const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
   const navigate = useNavigate();
-  const { signOut } = useCRM();
+  const { signOut, refreshData } = useCRM();
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
@@ -99,9 +99,9 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
         
         setSyncStatus(`✅ Sync successful! ${result.summary.activitiesSynced} activities synced`);
         
-        // Refresh the page after 3 seconds to show updated data
+        // Force complete page reload to show updated data
         setTimeout(() => {
-          addLog('🔄 Refreshing CRM to show new data...');
+          addLog('🔄 Force reloading page to show new data...');
           window.location.reload();
         }, 3000);
       } else {
