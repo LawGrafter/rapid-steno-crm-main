@@ -1,12 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../integrations/supabase/client';
-import type { User, Session } from '@supabase/supabase-js';
 import type { Lead, Campaign, EmailList, Template } from '../types';
+
+// Simple user type for local auth
+interface LocalUser {
+  id: string;
+  email: string;
+  fullName: string;
+}
 
 interface CRMContextType {
   // User state
-  user: User | null;
-  session: Session | null;
+  user: LocalUser | null;
   isAuthenticated: boolean;
   loading: boolean;
   
@@ -63,8 +67,7 @@ export const useCRM = () => {
 };
 
 export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<LocalUser | null>(null);
   const [loading, setLoading] = useState(true);
   
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -77,483 +80,231 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedEmailList, setSelectedEmailList] = useState<EmailList | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
 
-  const isAuthenticated = !!session?.user;
+  const isAuthenticated = !!user;
 
-  // Initialize auth state
+  // Initialize auth state from localStorage
   useEffect(() => {
-    let mounted = true;
-    
-    // Check for existing session first
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      
-      console.log('Initial session check:', !!session);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!mounted) return;
-        
-        console.log('Auth state change:', event, !!session);
-        
-        // Update state and localStorage
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Sync with localStorage
-        if (session?.user) {
-          localStorage.setItem('isAuthenticated', 'true');
-        } else {
-          localStorage.removeItem('isAuthenticated');
-        }
-        
-        // Don't set loading false on initial session since we handle that above
-        if (event !== 'INITIAL_SESSION') {
-          setLoading(false);
-        }
+    const savedUser = localStorage.getItem('crm_user');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
+        localStorage.removeItem('crm_user');
       }
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    }
+    setLoading(false);
   }, []);
 
-  // Load data when user is authenticated OR on initial load
+  // Load initial data
   useEffect(() => {
-    // Always load leads data (for MongoDB synced leads)
     refreshData();
   }, []);
 
   // Auth methods
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (!error) {
+    // Simple local authentication
+    if (email === 'admin@rapidsteno.com' && password === 'admin123') {
+      const user = {
+        id: '1',
+        email: email,
+        fullName: 'Admin User'
+      };
+      setUser(user);
+      localStorage.setItem('crm_user', JSON.stringify(user));
       localStorage.setItem('isAuthenticated', 'true');
+      return { error: null };
     }
-    
-    return { error };
+    return { error: { message: 'Invalid credentials' } };
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName || '',
-        }
-      }
-    });
-    return { error };
+    // Simple local registration
+    const user = {
+      id: Date.now().toString(),
+      email: email,
+      fullName: fullName || email
+    };
+    setUser(user);
+    localStorage.setItem('crm_user', JSON.stringify(user));
+    localStorage.setItem('isAuthenticated', 'true');
+    return { error: null };
   };
 
   const signOut = async () => {
-    try {
-      // Clear state immediately regardless of Supabase response
-      setUser(null);
-      setSession(null);
-      setLeads([]);
-      setCampaigns([]);
-      setEmailLists([]);
-      setTemplates([]);
-      setSelectedLead(null);
-      setSelectedCampaign(null);
-      setSelectedEmailList(null);
-      setSelectedTemplate(null);
-      localStorage.removeItem('isAuthenticated');
-      
-      // Try to sign out from Supabase (but don't let it block the logout)
-      await supabase.auth.signOut({ scope: 'local' });
-      
-      return { error: null };
-    } catch (error) {
-      console.warn('Supabase signout error (proceeding anyway):', error);
-      return { error: null }; // Return success anyway since we cleared local state
-    }
+    setUser(null);
+    setLeads([]);
+    setCampaigns([]);
+    setEmailLists([]);
+    setTemplates([]);
+    setSelectedLead(null);
+    setSelectedCampaign(null);
+    setSelectedEmailList(null);
+    setSelectedTemplate(null);
+    localStorage.removeItem('crm_user');
+    localStorage.removeItem('isAuthenticated');
+    return { error: null };
   };
 
   // Data loading
   const refreshData = async () => {
-    // Allow data refresh even if user is null (for MongoDB synced leads)
-
+    // Load data from localStorage
     try {
-      // Clear existing leads first
-      setLeads([]);
-      
-      // REMOVE filtering - get all leads
-      const { data: leadsData, error: leadsError } = await supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (leadsData) setLeads(leadsData);
+      const savedLeads = localStorage.getItem('crm_leads');
+      const savedCampaigns = localStorage.getItem('crm_campaigns');
+      const savedEmailLists = localStorage.getItem('crm_email_lists');
+      const savedTemplates = localStorage.getItem('crm_templates');
 
-      // Load campaigns - filter by current user's ID (if logged in)
-      if (user) {
-        const { data: campaignsData } = await supabase
-          .from('campaigns')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        if (campaignsData) setCampaigns(campaignsData);
-
-        // Load email lists - filter by current user's ID
-        const { data: emailListsData } = await supabase
-          .from('email_lists')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        if (emailListsData) setEmailLists(emailListsData);
-
-        // Load templates - filter by current user's ID
-        const { data: templatesData } = await supabase
-          .from('email_templates')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        if (templatesData) setTemplates(templatesData);
-      }
+      if (savedLeads) setLeads(JSON.parse(savedLeads));
+      if (savedCampaigns) setCampaigns(JSON.parse(savedCampaigns));
+      if (savedEmailLists) setEmailLists(JSON.parse(savedEmailLists));
+      if (savedTemplates) setTemplates(JSON.parse(savedTemplates));
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading data from localStorage:', error);
     }
   };
 
-  // Lead operations
+  // Lead methods
   const addLead = async (leadData: Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    const { data, error } = await supabase
-      .from('leads')
-      .insert([{
-        ...leadData,
-        user_id: user?.id || '8fd923c2-c497-4df3-8ada-7b3be64d5521', // Default CRM user ID
-        created_by: user?.id || '8fd923c2-c497-4df3-8ada-7b3be64d5521' // Default CRM user ID
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding lead:', error);
-      return;
-    }
-
-    if (data) {
-      setLeads(prev => [data, ...prev]);
-    }
+    const newLead: Lead = {
+      ...leadData,
+      id: Date.now().toString(),
+      user_id: user?.id || '1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    const updatedLeads = [...leads, newLead];
+    setLeads(updatedLeads);
+    localStorage.setItem('crm_leads', JSON.stringify(updatedLeads));
   };
 
   const addLeadsBulk = async (leadsData: Omit<Lead, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]) => {
-
-    try {
-      const results = {
-        added: 0,
-        updated: 0,
-        skipped: 0,
-        errors: [] as string[]
-      };
-
-      // Process each lead individually to handle duplicates
-      for (const leadData of leadsData) {
-        try {
-          // Check for existing lead by email or phone
-          let existingLead = null;
-          
-          if (leadData.email) {
-            const { data: emailMatch } = await supabase
-              .from('leads')
-              .select('*')
-              .eq('email', leadData.email)
-              .single();
-            existingLead = emailMatch;
-          }
-          
-          if (!existingLead && leadData.phone) {
-            const { data: phoneMatch } = await supabase
-              .from('leads')
-              .select('*')
-              .eq('phone', leadData.phone)
-              .single();
-            existingLead = phoneMatch;
-          }
-
-          if (existingLead) {
-            // Update existing lead
-            const { error: updateError } = await supabase
-              .from('leads')
-              .update({
-                ...leadData,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', existingLead.id);
-
-            if (updateError) {
-              results.errors.push(`Failed to update ${leadData.email || leadData.phone}: ${updateError.message}`);
-            } else {
-              results.updated++;
-            }
-          } else {
-            // Add new lead
-            const { error: insertError } = await supabase
-              .from('leads')
-              .insert([{ 
-                ...leadData, 
-                user_id: user?.id || '8fd923c2-c497-4df3-8ada-7b3be64d5521', // Default CRM user ID
-                created_by: user?.id || '8fd923c2-c497-4df3-8ada-7b3be64d5521' // Default CRM user ID
-              }]);
-
-            if (insertError) {
-              results.errors.push(`Failed to add ${leadData.email || leadData.phone}: ${insertError.message}`);
-            } else {
-              results.added++;
-            }
-          }
-        } catch (error) {
-          results.errors.push(`Error processing lead: ${error}`);
-        }
-      }
-
-      // Refresh data to get updated leads
-      await refreshData();
-
-      return { 
-        data: results, 
-        error: results.errors.length > 0 ? results.errors.join('; ') : null 
-      };
-    } catch (error) {
-      console.error('Error in bulk import:', error);
-      return { error };
-    }
+    const newLeads: Lead[] = leadsData.map(lead => ({
+      ...lead,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      user_id: user?.id || '1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }));
+    
+    const updatedLeads = [...leads, ...newLeads];
+    setLeads(updatedLeads);
+    localStorage.setItem('crm_leads', JSON.stringify(updatedLeads));
+    return { data: newLeads, error: null };
   };
 
   const updateLead = async (id: string, updates: Partial<Lead>) => {
-    const { data, error } = await supabase
-      .from('leads')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating lead:', error);
-      return;
-    }
-
-    if (data) {
-      setLeads(prev => prev.map(lead => lead.id === id ? data : lead));
-      if (selectedLead?.id === id) {
-        setSelectedLead(data);
-      }
-    }
+    const updatedLeads = leads.map(lead => 
+      lead.id === id 
+        ? { ...lead, ...updates, updated_at: new Date().toISOString() }
+        : lead
+    );
+    setLeads(updatedLeads);
+    localStorage.setItem('crm_leads', JSON.stringify(updatedLeads));
   };
 
   const deleteLead = async (id: string) => {
-    const { error } = await supabase
-      .from('leads')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting lead:', error);
-      return;
-    }
-
-    setLeads(prev => prev.filter(lead => lead.id !== id));
-    if (selectedLead?.id === id) {
-      setSelectedLead(null);
-    }
+    const updatedLeads = leads.filter(lead => lead.id !== id);
+    setLeads(updatedLeads);
+    localStorage.setItem('crm_leads', JSON.stringify(updatedLeads));
   };
 
-  // Campaign operations
+  // Campaign methods
   const addCampaign = async (campaignData: Omit<Campaign, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from('campaigns')
-      .insert([{ ...campaignData, user_id: user.id }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding campaign:', error);
-      return;
-    }
-
-    if (data) {
-      setCampaigns(prev => [data, ...prev]);
-    }
+    const newCampaign: Campaign = {
+      ...campaignData,
+      id: Date.now().toString(),
+      user_id: user?.id || '1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    const updatedCampaigns = [...campaigns, newCampaign];
+    setCampaigns(updatedCampaigns);
+    localStorage.setItem('crm_campaigns', JSON.stringify(updatedCampaigns));
   };
 
   const updateCampaign = async (id: string, updates: Partial<Campaign>) => {
-    const { data, error } = await supabase
-      .from('campaigns')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating campaign:', error);
-      return;
-    }
-
-    if (data) {
-      setCampaigns(prev => prev.map(campaign => campaign.id === id ? data : campaign));
-      if (selectedCampaign?.id === id) {
-        setSelectedCampaign(data);
-      }
-    }
+    const updatedCampaigns = campaigns.map(campaign => 
+      campaign.id === id 
+        ? { ...campaign, ...updates, updated_at: new Date().toISOString() }
+        : campaign
+    );
+    setCampaigns(updatedCampaigns);
+    localStorage.setItem('crm_campaigns', JSON.stringify(updatedCampaigns));
   };
 
   const deleteCampaign = async (id: string) => {
-    const { error } = await supabase
-      .from('campaigns')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting campaign:', error);
-      return;
-    }
-
-    setCampaigns(prev => prev.filter(campaign => campaign.id !== id));
-    if (selectedCampaign?.id === id) {
-      setSelectedCampaign(null);
-    }
+    const updatedCampaigns = campaigns.filter(campaign => campaign.id !== id);
+    setCampaigns(updatedCampaigns);
+    localStorage.setItem('crm_campaigns', JSON.stringify(updatedCampaigns));
   };
 
-  // Email List operations
+  // Email List methods
   const addEmailList = async (listData: Omit<EmailList, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from('email_lists')
-      .insert([{ ...listData, user_id: user.id }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding email list:', error);
-      return;
-    }
-
-    if (data) {
-      setEmailLists(prev => [data, ...prev]);
-    }
+    const newList: EmailList = {
+      ...listData,
+      id: Date.now().toString(),
+      user_id: user?.id || '1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    const updatedLists = [...emailLists, newList];
+    setEmailLists(updatedLists);
+    localStorage.setItem('crm_email_lists', JSON.stringify(updatedLists));
   };
 
   const updateEmailList = async (id: string, updates: Partial<EmailList>) => {
-    const { data, error } = await supabase
-      .from('email_lists')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating email list:', error);
-      return;
-    }
-
-    if (data) {
-      setEmailLists(prev => prev.map(list => list.id === id ? data : list));
-      if (selectedEmailList?.id === id) {
-        setSelectedEmailList(data);
-      }
-    }
+    const updatedLists = emailLists.map(list => 
+      list.id === id 
+        ? { ...list, ...updates, updated_at: new Date().toISOString() }
+        : list
+    );
+    setEmailLists(updatedLists);
+    localStorage.setItem('crm_email_lists', JSON.stringify(updatedLists));
   };
 
   const deleteEmailList = async (id: string) => {
-    const { error } = await supabase
-      .from('email_lists')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting email list:', error);
-      return;
-    }
-
-    setEmailLists(prev => prev.filter(list => list.id !== id));
-    if (selectedEmailList?.id === id) {
-      setSelectedEmailList(null);
-    }
+    const updatedLists = emailLists.filter(list => list.id !== id);
+    setEmailLists(updatedLists);
+    localStorage.setItem('crm_email_lists', JSON.stringify(updatedLists));
   };
 
-  // Template operations
+  // Template methods
   const addTemplate = async (templateData: Omit<Template, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from('email_templates')
-      .insert([{ ...templateData, user_id: user.id }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding template:', error);
-      return;
-    }
-
-    if (data) {
-      setTemplates(prev => [data, ...prev]);
-    }
+    const newTemplate: Template = {
+      ...templateData,
+      id: Date.now().toString(),
+      user_id: user?.id || '1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    const updatedTemplates = [...templates, newTemplate];
+    setTemplates(updatedTemplates);
+    localStorage.setItem('crm_templates', JSON.stringify(updatedTemplates));
   };
 
   const updateTemplate = async (id: string, updates: Partial<Template>) => {
-    const { data, error } = await supabase
-      .from('email_templates')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating template:', error);
-      return;
-    }
-
-    if (data) {
-      setTemplates(prev => prev.map(template => template.id === id ? data : template));
-      if (selectedTemplate?.id === id) {
-        setSelectedTemplate(data);
-      }
-    }
+    const updatedTemplates = templates.map(template => 
+      template.id === id 
+        ? { ...template, ...updates, updated_at: new Date().toISOString() }
+        : template
+    );
+    setTemplates(updatedTemplates);
+    localStorage.setItem('crm_templates', JSON.stringify(updatedTemplates));
   };
 
   const deleteTemplate = async (id: string) => {
-    const { error } = await supabase
-      .from('email_templates')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting template:', error);
-      return;
-    }
-
-    setTemplates(prev => prev.filter(template => template.id !== id));
-    if (selectedTemplate?.id === id) {
-      setSelectedTemplate(null);
-    }
+    const updatedTemplates = templates.filter(template => template.id !== id);
+    setTemplates(updatedTemplates);
+    localStorage.setItem('crm_templates', JSON.stringify(updatedTemplates));
   };
 
   const value: CRMContextType = {
     user,
-    session,
     isAuthenticated,
     loading,
     signIn,
